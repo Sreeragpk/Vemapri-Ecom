@@ -352,7 +352,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../utils/api';
 import toast from 'react-hot-toast';
-import { Search, Filter, Eye, Truck, CheckCircle2, Clock } from 'lucide-react';
+import { Search, Filter, Eye, Truck, CheckCircle2 } from 'lucide-react';
 
 const AdminOrders = () => {
   const [orders, setOrders] = useState([]);

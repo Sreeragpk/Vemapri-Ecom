@@ -5,7 +5,7 @@ import {
   Users,
   ShoppingBag,
   Package,
-  DollarSign,
+  // DollarSign,
   TrendingUp,
   IndianRupee,
 } from 'lucide-react';
@@ -206,7 +206,7 @@ const AdminDashboard = () => {
                   <th className="px-6 py-3 text-left text-[11px] font-semibold text-slate-500 tracking-wider uppercase">
                     Status
                   </th>
-                  <th className="px-6 py-3 text-left text-[11px] font-semibold text-slate-500 tracking-wider uppercase text-right">
+                  <th className="px-6 py-3  text-[11px] font-semibold text-slate-500 tracking-wider uppercase text-right">
                     Total
                   </th>
                 </tr>

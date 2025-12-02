@@ -368,7 +368,10 @@ const Register = () => {
     password: '',
     confirmPassword: '',
   });
-  const [userId, setUserId] = useState('');
+ const [userId, setUserId] = useState('');
+// later, to avoid 'assigned but never used'
+void userId;
+
   const [otpData, setOtpData] = useState({
     emailOtp: '',
     mobileOtp: '',

@@ -453,7 +453,7 @@ import {
   ChevronDown,
   Heart,
   Search,
-  MapPin,
+  // MapPin,
   Bell,
 } from 'lucide-react';
 import api from '../utils/api';
