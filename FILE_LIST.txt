@@ -1,0 +1,41 @@
+Files to copy code into:
+========================
+
+Components:
+- src\components\Navbar.js
+- src\components\Footer.js
+- src\components\ProductCard.js
+- src\components\AdminLayout.js
+
+Context:
+- src\context\AuthContext.js
+- src\context\CartContext.js
+
+Utils:
+- src\utils\api.js
+
+Pages:
+- src\pages\Home.js
+- src\pages\Products.js
+- src\pages\ProductDetail.js
+- src\pages\Cart.js
+- src\pages\Checkout.js
+- src\pages\Login.js
+- src\pages\Register.js
+- src\pages\Orders.js
+- src\pages\Profile.js
+- src\pages\PrivacyPolicy.js
+- src\pages\ContactUs.js
+- src\pages\NotFound.js
+
+Admin Pages:
+- src\pages\admin\AdminDashboard.js
+- src\pages\admin\AdminUsers.js
+- src\pages\admin\AdminProducts.js
+- src\pages\admin\ProductForm.js
+- src\pages\admin\AdminOrders.js
+- src\pages\admin\OrderDetail.js
+
+Main Files:
+- src\App.js
+- src\index.css
