@@ -25,16 +25,40 @@ const Footer = () => {
               and daily essentials.
             </p>
             <div className="flex space-x-3">
-              <a href="#" className="hover:text-white transition-colors">
+              <a
+                href="https://facebook.com/yourpage"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Vemapri on Facebook"
+                className="hover:text-white transition-colors"
+              >
                 <Facebook size={18} />
               </a>
-              <a href="#" className="hover:text-white transition-colors">
+              <a
+                href="https://twitter.com/yourprofile"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Vemapri on Twitter"
+                className="hover:text-white transition-colors"
+              >
                 <Twitter size={18} />
               </a>
-              <a href="#" className="hover:text-white transition-colors">
+              <a
+                href="https://instagram.com/yourprofile"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Vemapri on Instagram"
+                className="hover:text-white transition-colors"
+              >
                 <Instagram size={18} />
               </a>
-              <a href="#" className="hover:text-white transition-colors">
+              <a
+                href="https://linkedin.com/company/yourcompany"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Vemapri on LinkedIn"
+                className="hover:text-white transition-colors"
+              >
                 <Linkedin size={18} />
               </a>
             </div>
