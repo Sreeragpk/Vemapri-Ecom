@@ -1,3 +1,4 @@
+// src/pages/admin/AdminDashboard.jsx
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../utils/api';
@@ -5,7 +6,6 @@ import {
   Users,
   ShoppingBag,
   Package,
-  // DollarSign,
   TrendingUp,
   IndianRupee,
 } from 'lucide-react';
@@ -22,30 +22,37 @@ const AdminDashboard = () => {
 
   useEffect(() => {
     fetchDashboardStats();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchDashboardStats = async () => {
     try {
+      // parallel fetch
       const [usersRes, productsRes, ordersRes] = await Promise.all([
         api.get('/users?limit=1'),
         api.get('/products?limit=1'),
         api.get('/orders/all?limit=5'),
       ]);
 
-      const totalRevenue = ordersRes.data.orders.reduce(
-        (sum, order) => sum + order.totalPrice,
-        0
-      );
+      // Normalize data returned by backend
+      const recentOrders = ordersRes?.data?.items ?? [];
+      const totalOrders = ordersRes?.data?.meta?.total ?? 0;
+
+      // compute revenue from recent orders (or 0)
+      const totalRevenue = Array.isArray(recentOrders)
+        ? recentOrders.reduce((sum, order) => sum + (Number(order.totalPrice) || 0), 0)
+        : 0;
 
       setStats({
-        totalUsers: usersRes.data.totalUsers,
-        totalProducts: productsRes.data.totalProducts,
-        totalOrders: ordersRes.data.totalOrders,
+        totalUsers: usersRes?.data?.totalUsers ?? 0,
+        totalProducts: productsRes?.data?.totalProducts ?? 0,
+        totalOrders,
         totalRevenue,
-        recentOrders: ordersRes.data.orders,
+        recentOrders,
       });
     } catch (error) {
       console.error('Error fetching dashboard stats:', error);
+      // keep defaults if error
     } finally {
       setLoading(false);
     }
@@ -78,8 +85,8 @@ const AdminDashboard = () => {
     },
     {
       title: 'Total Revenue',
-      value: `₹${stats.totalRevenue.toLocaleString()}`,
-      icon: IndianRupee ,
+      value: `₹${Number(stats.totalRevenue || 0).toLocaleString()}`,
+      icon: IndianRupee,
       accent: 'from-emerald-600 to-emerald-400',
       light: 'bg-emerald-50 text-emerald-700',
       link: '/admin/orders',
@@ -135,7 +142,6 @@ const AdminDashboard = () => {
               to={stat.link}
               className="group relative overflow-hidden rounded-2xl bg-white/90 border border-emerald-100/70 shadow-sm hover:shadow-lg hover:border-emerald-300/80 transition-all"
             >
-              {/* subtle gradient stripe */}
               <div
                 className={`pointer-events-none absolute inset-x-0 -top-6 h-16 bg-gradient-to-r ${stat.accent} opacity-10`}
               />
@@ -184,10 +190,9 @@ const AdminDashboard = () => {
           </Link>
         </div>
 
-        {stats.recentOrders.length === 0 ? (
+        {(!Array.isArray(stats.recentOrders) || stats.recentOrders.length === 0) ? (
           <div className="px-4 sm:px-6 py-10 text-center text-slate-400 text-sm">
-            No orders found yet. Once customers place orders, they will appear
-            here.
+            No orders found yet. Once customers place orders, they will appear here.
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -206,7 +211,7 @@ const AdminDashboard = () => {
                   <th className="px-6 py-3 text-left text-[11px] font-semibold text-slate-500 tracking-wider uppercase">
                     Status
                   </th>
-                  <th className="px-6 py-3  text-[11px] font-semibold text-slate-500 tracking-wider uppercase text-right">
+                  <th className="px-6 py-3 text-[11px] font-semibold text-slate-500 tracking-wider uppercase text-right">
                     Total
                   </th>
                 </tr>
@@ -222,14 +227,14 @@ const AdminDashboard = () => {
                         to={`/admin/orders/${order._id}`}
                         className="text-[13px] font-semibold text-emerald-700 hover:text-emerald-900"
                       >
-                        {order.orderNumber}
+                        {order.orderNumber ?? '—'}
                       </Link>
                     </td>
                     <td className="px-6 py-3 whitespace-nowrap text-[13px] text-slate-700">
-                      {order.user?.firstName} {order.user?.lastName}
+                      {order.user?.firstName ?? ''} {order.user?.lastName ?? ''}
                     </td>
                     <td className="px-6 py-3 whitespace-nowrap text-[13px] text-slate-500">
-                      {new Date(order.createdAt).toLocaleDateString()}
+                      {order.createdAt ? new Date(order.createdAt).toLocaleDateString() : '—'}
                     </td>
                     <td className="px-6 py-3 whitespace-nowrap">
                       <span
@@ -242,11 +247,11 @@ const AdminDashboard = () => {
                         }`}
                       >
                         <span className="h-1.5 w-1.5 rounded-full mr-1.5 bg-current" />
-                        {order.orderStatus}
+                        {order.orderStatus ?? 'pending'}
                       </span>
                     </td>
                     <td className="px-6 py-3 whitespace-nowrap text-right text-[13px] font-semibold text-slate-900">
-                      ₹{order.totalPrice.toLocaleString()}
+                      ₹{Number(order.totalPrice || 0).toLocaleString()}
                     </td>
                   </tr>
                 ))}

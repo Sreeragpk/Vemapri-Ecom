@@ -1,8 +1,9 @@
+
 // import React, { useState, useEffect } from 'react';
 // import { Link } from 'react-router-dom';
 // import api from '../../utils/api';
 // import toast from 'react-hot-toast';
-// import { Search, Filter, Eye } from 'lucide-react';
+// import { Search, Filter, Eye, Truck, CheckCircle2 } from 'lucide-react';
 
 // const AdminOrders = () => {
 //   const [orders, setOrders] = useState([]);
@@ -11,12 +12,12 @@
 //     orderNumber: '',
 //     status: '',
 //     startDate: '',
-//     endDate: ''
+//     endDate: '',
 //   });
 //   const [pagination, setPagination] = useState({
 //     currentPage: 1,
 //     totalPages: 1,
-//     totalOrders: 0
+//     totalOrders: 0,
 //   });
 
 //   useEffect(() => {
@@ -32,7 +33,7 @@
 //         limit: 20,
 //         ...Object.fromEntries(
 //           Object.entries(filters).filter(([_, v]) => v !== '')
-//         )
+//         ),
 //       };
 
 //       const res = await api.get('/orders/all', { params });
@@ -40,7 +41,7 @@
 //       setPagination({
 //         currentPage: Number(res.data.currentPage),
 //         totalPages: res.data.totalPages,
-//         totalOrders: res.data.totalOrders
+//         totalOrders: res.data.totalOrders,
 //       });
 //     } catch (error) {
 //       toast.error('Failed to fetch orders');
@@ -55,9 +56,12 @@
 //       processing: 'bg-sky-50 text-sky-700 border border-sky-100',
 //       shipped: 'bg-violet-50 text-violet-700 border border-violet-100',
 //       delivered: 'bg-emerald-50 text-emerald-700 border border-emerald-100',
-//       cancelled: 'bg-rose-50 text-rose-700 border border-rose-100'
+//       cancelled: 'bg-rose-50 text-rose-700 border border-rose-100',
 //     };
-//     return colors[status] || 'bg-slate-50 text-slate-700 border border-slate-100';
+//     return (
+//       colors[status] ||
+//       'bg-slate-50 text-slate-700 border border-slate-100'
+//     );
 //   };
 
 //   const handleFilterChange = (field, value) => {
@@ -70,9 +74,81 @@
 //       orderNumber: '',
 //       status: '',
 //       startDate: '',
-//       endDate: ''
+//       endDate: '',
 //     });
 //     setPagination((prev) => ({ ...prev, currentPage: 1 }));
+//   };
+
+//   const formatDate = (date) => {
+//     if (!date) return '';
+//     return new Date(date).toLocaleDateString('en-IN', {
+//       year: 'numeric',
+//       month: 'short',
+//       day: 'numeric',
+//     });
+//   };
+
+//   const getLatestStatus = (order) => {
+//     if (order.statusHistory && order.statusHistory.length > 0) {
+//       return order.statusHistory[order.statusHistory.length - 1].status;
+//     }
+//     return order.orderStatus;
+//   };
+
+//   const getDeliveryMeta = (order) => {
+//     if (!order) return null;
+
+//     const latestStatus = getLatestStatus(order);
+
+//     // Delivered → use delivered date if present
+//     if (latestStatus === 'delivered') {
+//       const deliveredHistory = order.statusHistory?.find(
+//         (s) => s.status === 'delivered'
+//       );
+//       const deliveredDate =
+//         deliveredHistory?.changedAt || order.deliveredAt;
+
+//       if (deliveredDate) {
+//         return {
+//           label: 'Delivered',
+//           date: new Date(deliveredDate),
+//           icon: CheckCircle2,
+//           accent: 'text-emerald-700',
+//         };
+//       }
+//     }
+
+//     // Backend expectedDeliveryDate
+//     if (order.expectedDeliveryDate) {
+//       return {
+//         label: 'Expected delivery',
+//         date: new Date(order.expectedDeliveryDate),
+//         icon: Truck,
+//         accent: 'text-emerald-700',
+//       };
+//     }
+
+//     // Fallback simple estimate from createdAt + status
+//     if (!order.createdAt) return null;
+
+//     const createdAt = new Date(order.createdAt);
+//     const status = latestStatus;
+//     const expected = new Date(createdAt);
+
+//     if (['pending', 'processing'].includes(status)) {
+//       expected.setDate(expected.getDate() + 2);
+//     } else if (status === 'shipped') {
+//       expected.setDate(expected.getDate() + 1);
+//     } else {
+//       expected.setDate(expected.getDate() + 2);
+//     }
+
+//     return {
+//       label: 'Estimated delivery',
+//       date: expected,
+//       icon: Truck,
+//       accent: 'text-emerald-600',
+//     };
 //   };
 
 //   return (
@@ -119,7 +195,9 @@
 //               type="text"
 //               placeholder="Search by order number..."
 //               value={filters.orderNumber}
-//               onChange={(e) => handleFilterChange('orderNumber', e.target.value)}
+//               onChange={(e) =>
+//                 handleFilterChange('orderNumber', e.target.value)
+//               }
 //               className="input pl-9 text-sm"
 //             />
 //             <Search
@@ -146,14 +224,18 @@
 //           <input
 //             type="date"
 //             value={filters.startDate}
-//             onChange={(e) => handleFilterChange('startDate', e.target.value)}
+//             onChange={(e) =>
+//               handleFilterChange('startDate', e.target.value)
+//             }
 //             className="input text-sm"
 //             placeholder="Start Date"
 //           />
 //           <input
 //             type="date"
 //             value={filters.endDate}
-//             onChange={(e) => handleFilterChange('endDate', e.target.value)}
+//             onChange={(e) =>
+//               handleFilterChange('endDate', e.target.value)
+//             }
 //             className="input text-sm"
 //             placeholder="End Date"
 //           />
@@ -173,7 +255,7 @@
 //                   Customer
 //                 </th>
 //                 <th className="px-6 py-3 text-left text-[11px] font-semibold text-slate-500 tracking-wider uppercase">
-//                   Date
+//                   Date & Delivery
 //                 </th>
 //                 <th className="px-6 py-3 text-left text-[11px] font-semibold text-slate-500 tracking-wider uppercase">
 //                   Items
@@ -205,97 +287,125 @@
 //                 </tr>
 //               ) : orders.length === 0 ? (
 //                 <tr>
-//                   <td colSpan="8" className="px-6 py-10 text-center text-slate-400 text-sm">
+//                   <td
+//                     colSpan="8"
+//                     className="px-6 py-10 text-center text-slate-400 text-sm"
+//                   >
 //                     No orders found for the selected filters.
 //                   </td>
 //                 </tr>
 //               ) : (
-//                 orders.map((order) => (
-//                   <tr key={order._id} className="hover:bg-emerald-50/60 transition-colors">
-//                     {/* Order number */}
-//                     <td className="px-6 py-4 whitespace-nowrap">
-//                       <Link
-//                         to={`/admin/orders/${order._id}`}
-//                         className="text-[13px] font-semibold text-emerald-700 hover:text-emerald-900"
-//                       >
-//                         {order.orderNumber}
-//                       </Link>
-//                     </td>
+//                 orders.map((order) => {
+//                   const deliveryMeta = getDeliveryMeta(order);
 
-//                     {/* Customer */}
-//                     <td className="px-6 py-4 whitespace-nowrap">
-//                       <div>
-//                         <div className="text-[13px] font-medium text-slate-900">
-//                           {order.user?.firstName} {order.user?.lastName}
+//                   return (
+//                     <tr
+//                       key={order._id}
+//                       className="hover:bg-emerald-50/60 transition-colors"
+//                     >
+//                       {/* Order number */}
+//                       <td className="px-6 py-4 whitespace-nowrap">
+//                         <Link
+//                           to={`/admin/orders/${order._id}`}
+//                           className="text-[13px] font-semibold text-emerald-700 hover:text-emerald-900"
+//                         >
+//                           {order.orderNumber}
+//                         </Link>
+//                       </td>
+
+//                       {/* Customer */}
+//                       <td className="px-6 py-4 whitespace-nowrap">
+//                         <div>
+//                           <div className="text-[13px] font-medium text-slate-900">
+//                             {order.user?.firstName} {order.user?.lastName}
+//                           </div>
+//                           <div className="text-[11px] text-slate-500">
+//                             {order.user?.email}
+//                           </div>
 //                         </div>
-//                         <div className="text-[11px] text-slate-500">
-//                           {order.user?.email}
+//                       </td>
+
+//                       {/* Date + delivery */}
+//                       <td className="px-6 py-4 whitespace-nowrap">
+//                         <div className="text-[13px] text-slate-700">
+//                           {formatDate(order.createdAt)}
 //                         </div>
-//                       </div>
-//                     </td>
+//                         {deliveryMeta && (
+//                           <div className="mt-1 flex items-center gap-1 text-[11px]">
+//                             <deliveryMeta.icon
+//                               size={12}
+//                               className="text-emerald-500"
+//                             />
+//                             <span className="text-slate-500">
+//                               {deliveryMeta.label}:{' '}
+//                               <span
+//                                 className={`font-medium ${deliveryMeta.accent}`}
+//                               >
+//                                 {formatDate(deliveryMeta.date)}
+//                               </span>
+//                             </span>
+//                           </div>
+//                         )}
+//                       </td>
 
-//                     {/* Date */}
-//                     <td className="px-6 py-4 whitespace-nowrap text-[13px] text-slate-500">
-//                       {new Date(order.createdAt).toLocaleDateString()}
-//                     </td>
+//                       {/* Items count */}
+//                       <td className="px-6 py-4 whitespace-nowrap text-[13px] text-slate-600">
+//                         {order.items.length} item(s)
+//                       </td>
 
-//                     {/* Items count */}
-//                     <td className="px-6 py-4 whitespace-nowrap text-[13px] text-slate-600">
-//                       {order.items.length} item(s)
-//                     </td>
+//                       {/* Total */}
+//                       <td className="px-6 py-4 whitespace-nowrap">
+//                         <div className="text-[13px] font-semibold text-slate-900">
+//                           ₹{order.totalPrice.toLocaleString()}
+//                         </div>
+//                       </td>
 
-//                     {/* Total */}
-//                     <td className="px-6 py-4 whitespace-nowrap">
-//                       <div className="text-[13px] font-semibold text-slate-900">
-//                         ₹{order.totalPrice.toLocaleString()}
-//                       </div>
-//                     </td>
+//                       {/* Payment */}
+//                       <td className="px-6 py-4 whitespace-nowrap">
+//                         <div className="flex flex-col gap-1">
+//                           <span
+//                             className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold ${
+//                               order.paymentInfo?.status === 'completed'
+//                                 ? 'bg-emerald-50 text-emerald-700 border border-emerald-100'
+//                                 : order.paymentInfo?.status === 'failed'
+//                                 ? 'bg-rose-50 text-rose-700 border border-rose-100'
+//                                 : 'bg-amber-50 text-amber-700 border border-amber-100'
+//                             }`}
+//                           >
+//                             <span className="h-1.5 w-1.5 rounded-full bg-current mr-1.5" />
+//                             {order.paymentInfo?.status || 'pending'}
+//                           </span>
+//                           <span className="text-[11px] text-slate-500 uppercase tracking-wide">
+//                             {order.paymentInfo?.method || 'N/A'}
+//                           </span>
+//                         </div>
+//                       </td>
 
-//                     {/* Payment */}
-//                     <td className="px-6 py-4 whitespace-nowrap">
-//                       <div className="flex flex-col gap-1">
+//                       {/* Order status */}
+//                       <td className="px-6 py-4 whitespace-nowrap">
 //                         <span
-//                           className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold ${
-//                             order.paymentInfo.status === 'completed'
-//                               ? 'bg-emerald-50 text-emerald-700 border border-emerald-100'
-//                               : order.paymentInfo.status === 'failed'
-//                               ? 'bg-rose-50 text-rose-700 border border-rose-100'
-//                               : 'bg-amber-50 text-amber-700 border border-amber-100'
-//                           }`}
+//                           className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold ${getStatusColor(
+//                             order.orderStatus
+//                           )}`}
 //                         >
 //                           <span className="h-1.5 w-1.5 rounded-full bg-current mr-1.5" />
-//                           {order.paymentInfo.status}
+//                           {order.orderStatus}
 //                         </span>
-//                         <span className="text-[11px] text-slate-500 uppercase tracking-wide">
-//                           {order.paymentInfo.method}
-//                         </span>
-//                       </div>
-//                     </td>
+//                       </td>
 
-//                     {/* Order status */}
-//                     <td className="px-6 py-4 whitespace-nowrap">
-//                       <span
-//                         className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold ${getStatusColor(
-//                           order.orderStatus
-//                         )}`}
-//                       >
-//                         <span className="h-1.5 w-1.5 rounded-full bg-current mr-1.5" />
-//                         {order.orderStatus}
-//                       </span>
-//                     </td>
-
-//                     {/* Actions */}
-//                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-//                       <Link
-//                         to={`/admin/orders/${order._id}`}
-//                         className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-emerald-100 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:border-emerald-200 transition-all"
-//                         title="View order details"
-//                       >
-//                         <Eye size={16} />
-//                       </Link>
-//                     </td>
-//                   </tr>
-//                 ))
+//                       {/* Actions */}
+//                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+//                         <Link
+//                           to={`/admin/orders/${order._id}`}
+//                           className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-emerald-100 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:border-emerald-200 transition-all"
+//                           title="View order details"
+//                         >
+//                           <Eye size={16} />
+//                         </Link>
+//                       </td>
+//                     </tr>
+//                   );
+//                 })
 //               )}
 //             </tbody>
 //           </table>
@@ -319,7 +429,7 @@
 //                 onClick={() =>
 //                   setPagination((prev) => ({
 //                     ...prev,
-//                     currentPage: prev.currentPage - 1
+//                     currentPage: prev.currentPage - 1,
 //                   }))
 //                 }
 //                 disabled={pagination.currentPage === 1}
@@ -331,7 +441,7 @@
 //                 onClick={() =>
 //                   setPagination((prev) => ({
 //                     ...prev,
-//                     currentPage: prev.currentPage + 1
+//                     currentPage: prev.currentPage + 1,
 //                   }))
 //                 }
 //                 disabled={pagination.currentPage === pagination.totalPages}
@@ -348,6 +458,7 @@
 // };
 
 // export default AdminOrders;
+// src/pages/admin/AdminOrders.js  (replace your existing component)
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../utils/api';
@@ -355,7 +466,7 @@ import toast from 'react-hot-toast';
 import { Search, Filter, Eye, Truck, CheckCircle2 } from 'lucide-react';
 
 const AdminOrders = () => {
-  const [orders, setOrders] = useState([]);
+  const [orders, setOrders] = useState([]); // always keep an array
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({
     orderNumber: '',
@@ -386,14 +497,36 @@ const AdminOrders = () => {
       };
 
       const res = await api.get('/orders/all', { params });
-      setOrders(res.data.orders);
+
+      // normalize response shapes:
+      // backend may return { items: [...], meta: {...} } or { orders: [...], currentPage, totalPages, totalOrders }
+      const data = res.data || {};
+      const items = Array.isArray(data.items)
+        ? data.items
+        : Array.isArray(data.orders)
+        ? data.orders
+        : Array.isArray(data) // rare case: response is array directly
+        ? data
+        : [];
+
+      // meta normalization with sensible defaults
+      const meta = data.meta || {
+        page: data.currentPage || pagination.currentPage,
+        limit: data.limit || 20,
+        total: data.totalOrders || data.total || (items ? items.length : 0),
+      };
+
+      setOrders(items);
       setPagination({
-        currentPage: Number(res.data.currentPage),
-        totalPages: res.data.totalPages,
-        totalOrders: res.data.totalOrders,
+        currentPage: Number(meta.page || pagination.currentPage),
+        totalPages: Math.max(1, Math.ceil((meta.total || items.length) / (meta.limit || 20))),
+        totalOrders: Number(meta.total || items.length || 0),
       });
     } catch (error) {
+      console.error('fetchOrders error:', error);
       toast.error('Failed to fetch orders');
+      // keep previous data but ensure orders is an array
+      setOrders((prev) => (Array.isArray(prev) ? prev : []));
     } finally {
       setLoading(false);
     }
@@ -438,10 +571,10 @@ const AdminOrders = () => {
   };
 
   const getLatestStatus = (order) => {
-    if (order.statusHistory && order.statusHistory.length > 0) {
+    if (order?.statusHistory && order.statusHistory.length > 0) {
       return order.statusHistory[order.statusHistory.length - 1].status;
     }
-    return order.orderStatus;
+    return order?.orderStatus || 'pending';
   };
 
   const getDeliveryMeta = (order) => {
@@ -499,6 +632,9 @@ const AdminOrders = () => {
       accent: 'text-emerald-600',
     };
   };
+
+  // render safe helpers
+  const safeOrders = Array.isArray(orders) ? orders : [];
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
@@ -634,7 +770,7 @@ const AdminOrders = () => {
                     </div>
                   </td>
                 </tr>
-              ) : orders.length === 0 ? (
+              ) : safeOrders.length === 0 ? (
                 <tr>
                   <td
                     colSpan="8"
@@ -644,7 +780,7 @@ const AdminOrders = () => {
                   </td>
                 </tr>
               ) : (
-                orders.map((order) => {
+                safeOrders.map((order) => {
                   const deliveryMeta = getDeliveryMeta(order);
 
                   return (
@@ -658,7 +794,7 @@ const AdminOrders = () => {
                           to={`/admin/orders/${order._id}`}
                           className="text-[13px] font-semibold text-emerald-700 hover:text-emerald-900"
                         >
-                          {order.orderNumber}
+                          {order.orderNumber || '—'}
                         </Link>
                       </td>
 
@@ -666,10 +802,10 @@ const AdminOrders = () => {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div>
                           <div className="text-[13px] font-medium text-slate-900">
-                            {order.user?.firstName} {order.user?.lastName}
+                            {order.user?.firstName || ''} {order.user?.lastName || ''}
                           </div>
                           <div className="text-[11px] text-slate-500">
-                            {order.user?.email}
+                            {order.user?.email || ''}
                           </div>
                         </div>
                       </td>
@@ -699,13 +835,13 @@ const AdminOrders = () => {
 
                       {/* Items count */}
                       <td className="px-6 py-4 whitespace-nowrap text-[13px] text-slate-600">
-                        {order.items.length} item(s)
+                        {(order.items && order.items.length) || 0} item(s)
                       </td>
 
                       {/* Total */}
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-[13px] font-semibold text-slate-900">
-                          ₹{order.totalPrice.toLocaleString()}
+                          ₹{(Number(order.totalPrice) || 0).toLocaleString()}
                         </div>
                       </td>
 
@@ -738,7 +874,7 @@ const AdminOrders = () => {
                           )}`}
                         >
                           <span className="h-1.5 w-1.5 rounded-full bg-current mr-1.5" />
-                          {order.orderStatus}
+                          {order.orderStatus || '—'}
                         </span>
                       </td>
 
@@ -778,7 +914,7 @@ const AdminOrders = () => {
                 onClick={() =>
                   setPagination((prev) => ({
                     ...prev,
-                    currentPage: prev.currentPage - 1,
+                    currentPage: Math.max(1, prev.currentPage - 1),
                   }))
                 }
                 disabled={pagination.currentPage === 1}
@@ -790,7 +926,7 @@ const AdminOrders = () => {
                 onClick={() =>
                   setPagination((prev) => ({
                     ...prev,
-                    currentPage: prev.currentPage + 1,
+                    currentPage: Math.min(prev.currentPage + 1, pagination.totalPages),
                   }))
                 }
                 disabled={pagination.currentPage === pagination.totalPages}
