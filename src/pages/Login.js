@@ -291,6 +291,7 @@
 // };
 
 // export default Login;
+// src/pages/Login.jsx
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -306,14 +307,16 @@ const Login = () => {
     mobile: '',
     password: '',
   });
+
   const [twoFactorData, setTwoFactorData] = useState({
     userId: '',
     token: '',
   });
+
   const [requires2FA, setRequires2FA] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  // OAuth callback handler
+  // Handle OAuth callback (?token=... or ?error=...)
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const token = params.get('token');
@@ -325,21 +328,28 @@ const Login = () => {
       toast.error('Authentication failed. Please try again.');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location]);
+  }, [location.search]);
 
   const handleOAuthSuccess = async (token) => {
     try {
+      // Get user profile using the token, then call login()
+      // api interceptor will attach token from localStorage, so we temporarily store it:
       localStorage.setItem('token', token);
+
       const res = await api.get('/users/profile');
+      // now let AuthContext own token+user state
       login(token, res.data);
 
+      const from = location.state?.from?.pathname || '/';
       if (res.data.role === 'admin') {
-        navigate('/admin');
+        navigate('/admin', { replace: true });
       } else {
-        navigate('/');
+        navigate(from, { replace: true });
       }
       toast.success('Login successful!');
     } catch (error) {
+      console.error('OAuth login error', error);
+      localStorage.removeItem('token');
       toast.error('Failed to complete login');
     }
   };
@@ -365,6 +375,7 @@ const Login = () => {
     try {
       const res = await api.post('/auth/login', formData);
 
+      // backend shape: { requires2FA, userId? , token?, user? }
       if (res.data.requires2FA) {
         setTwoFactorData((prev) => ({
           ...prev,
@@ -373,17 +384,19 @@ const Login = () => {
         setRequires2FA(true);
         toast.success('Please enter your 2FA code');
       } else {
+        // normal login
         login(res.data.token, res.data.user);
 
         const from = location.state?.from?.pathname || '/';
         if (res.data.user.role === 'admin') {
-          navigate('/admin');
+          navigate('/admin', { replace: true });
         } else {
-          navigate(from);
+          navigate(from, { replace: true });
         }
         toast.success('Login successful!');
       }
     } catch (error) {
+      console.error('Login error', error);
       toast.error(error.response?.data?.message || 'Login failed');
     } finally {
       setLoading(false);
@@ -400,12 +413,13 @@ const Login = () => {
 
       const from = location.state?.from?.pathname || '/';
       if (res.data.user.role === 'admin') {
-        navigate('/admin');
+        navigate('/admin', { replace: true });
       } else {
-        navigate(from);
+        navigate(from, { replace: true });
       }
       toast.success('Login successful!');
     } catch (error) {
+      console.error('2FA verify error', error);
       toast.error(error.response?.data?.message || 'Verification failed');
     } finally {
       setLoading(false);
@@ -413,8 +427,10 @@ const Login = () => {
   };
 
   const handleSocialLogin = (provider) => {
+    // REACT_APP_API_URL should be like "https://vemapri-backend.onrender.com/api"
     const base = (process.env.REACT_APP_API_URL || 'http://localhost:5000/api')
-      .replace(/\/+$/, '');
+      .replace(/\/+$/, ''); // trim trailing slash
+    // sends user to backend /auth/google or /auth/facebook
     window.location.href = `${base}/auth/${provider}`;
   };
 
@@ -477,7 +493,7 @@ const Login = () => {
           {/* Right panel: Card */}
           <div>
             <div className="bg-white shadow-md rounded-2xl p-6 sm:p-8 border border-emerald-50">
-              {/* Small step indicator when 2FA is active */}
+              {/* Step indicator */}
               <div className="flex justify-center mb-4">
                 <div className="flex items-center space-x-3 text-xs font-medium">
                   <div className="flex items-center">
@@ -535,6 +551,7 @@ const Login = () => {
                         type="button"
                         className="w-full flex justify-center items-center px-4 py-2 border border-gray-200 rounded-lg shadow-sm bg-white text-xs sm:text-sm font-medium text-gray-700 hover:bg-gray-50"
                       >
+                        {/* Google icon */}
                         <svg
                           className="w-5 h-5 mr-2"
                           viewBox="0 0 24 24"
@@ -565,6 +582,7 @@ const Login = () => {
                         type="button"
                         className="w-full flex justify-center items-center px-4 py-2 border border-gray-200 rounded-lg shadow-sm bg-white text-xs sm:text-sm font-medium text-gray-700 hover:bg-gray-50"
                       >
+                        {/* Facebook icon */}
                         <svg
                           className="w-5 h-5 mr-2"
                           fill="#1877F2"
@@ -588,6 +606,7 @@ const Login = () => {
                       </div>
                     </div>
 
+                    {/* Mobile/password login */}
                     <form onSubmit={handleLogin} className="space-y-5">
                       <div>
                         <label
@@ -663,6 +682,7 @@ const Login = () => {
                     </form>
                   </>
                 ) : (
+                  // 2FA form
                   <form onSubmit={handleVerify2FA} className="space-y-6">
                     <p className="text-xs sm:text-sm text-gray-600 mb-1 text-center">
                       Enter the 6-digit code from your authenticator app to
@@ -728,3 +748,4 @@ const Login = () => {
 };
 
 export default Login;
+
