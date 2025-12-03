@@ -292,6 +292,7 @@
 
 // export default Login;
 // src/pages/Login.jsx
+// src/pages/Login.jsx
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -332,12 +333,9 @@ const Login = () => {
 
   const handleOAuthSuccess = async (token) => {
     try {
-      // Get user profile using the token, then call login()
-      // api interceptor will attach token from localStorage, so we temporarily store it:
       localStorage.setItem('token', token);
 
       const res = await api.get('/users/profile');
-      // now let AuthContext own token+user state
       login(token, res.data);
 
       const from = location.state?.from?.pathname || '/';
@@ -375,7 +373,6 @@ const Login = () => {
     try {
       const res = await api.post('/auth/login', formData);
 
-      // backend shape: { requires2FA, userId? , token?, user? }
       if (res.data.requires2FA) {
         setTwoFactorData((prev) => ({
           ...prev,
@@ -384,7 +381,6 @@ const Login = () => {
         setRequires2FA(true);
         toast.success('Please enter your 2FA code');
       } else {
-        // normal login
         login(res.data.token, res.data.user);
 
         const from = location.state?.from?.pathname || '/';
@@ -427,34 +423,32 @@ const Login = () => {
   };
 
   const handleSocialLogin = (provider) => {
-    // REACT_APP_API_URL should be like "https://vemapri-backend.onrender.com/api"
     const base = (process.env.REACT_APP_API_URL || 'http://localhost:5000/api')
-      .replace(/\/+$/, ''); // trim trailing slash
-    // sends user to backend /auth/google or /auth/facebook
+      .replace(/\/+$/, '');
     window.location.href = `${base}/auth/${provider}`;
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-emerald-50 via-emerald-50/40 to-white flex items-center">
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 via-slate-100 to-white flex items-center">
       <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
           {/* Left panel (desktop only) */}
           <div className="hidden lg:block">
             <div className="mb-6">
-              <span className="inline-flex items-center rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-800">
+              <span className="inline-flex items-center rounded-full bg-slate-900/5 px-3 py-1 text-xs font-semibold text-slate-900">
                 Welcome back to Vemapri
               </span>
               <h1 className="mt-4 text-3xl font-bold text-slate-900 leading-tight">
                 Sign in to continue your grocery journey.
               </h1>
               <p className="mt-3 text-sm text-slate-600">
-                Access your saved addresses, track your orders, and reorder your
-                favourite pulses, spices, nuts and more in a few taps.
+                Access your saved addresses, track orders, and reorder your
+                favourite essentials in just a few clicks.
               </p>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-              <div className="rounded-2xl bg-white shadow-sm border border-emerald-50 p-4">
+              <div className="rounded-2xl bg-white shadow-sm border border-slate-200 p-4">
                 <h3 className="font-semibold text-slate-900 mb-1">
                   Fast checkout
                 </h3>
@@ -463,15 +457,15 @@ const Login = () => {
                   quickly.
                 </p>
               </div>
-              <div className="rounded-2xl bg-white shadow-sm border border-emerald-50 p-4">
+              <div className="rounded-2xl bg-white shadow-sm border border-slate-200 p-4">
                 <h3 className="font-semibold text-slate-900 mb-1">
                   Smart recommendations
                 </h3>
                 <p className="text-xs text-slate-600">
-                  See personalised suggestions based on what you buy most.
+                  Get personalised suggestions based on your frequent purchases.
                 </p>
               </div>
-              <div className="rounded-2xl bg-white shadow-sm border border-emerald-50 p-4">
+              <div className="rounded-2xl bg-white shadow-sm border border-slate-200 p-4">
                 <h3 className="font-semibold text-slate-900 mb-1">
                   Order history
                 </h3>
@@ -479,12 +473,12 @@ const Login = () => {
                   Quickly repeat previous orders without searching again.
                 </p>
               </div>
-              <div className="rounded-2xl bg-white shadow-sm border border-emerald-50 p-4">
+              <div className="rounded-2xl bg-white shadow-sm border border-slate-200 p-4">
                 <h3 className="font-semibold text-slate-900 mb-1">
                   Secure login
                 </h3>
                 <p className="text-xs text-slate-600">
-                  Two-factor authentication keeps your account safe.
+                  Two-factor authentication helps keep your account safe.
                 </p>
               </div>
             </div>
@@ -492,7 +486,7 @@ const Login = () => {
 
           {/* Right panel: Card */}
           <div>
-            <div className="bg-white shadow-md rounded-2xl p-6 sm:p-8 border border-emerald-50">
+            <div className="bg-white shadow-md rounded-2xl p-6 sm:p-8 border border-slate-200">
               {/* Step indicator */}
               <div className="flex justify-center mb-4">
                 <div className="flex items-center space-x-3 text-xs font-medium">
@@ -500,8 +494,8 @@ const Login = () => {
                     <div
                       className={`w-7 h-7 rounded-full flex items-center justify-center ${
                         !requires2FA
-                          ? 'bg-emerald-600 text-white'
-                          : 'bg-emerald-100 text-emerald-700'
+                          ? 'bg-slate-900 text-white'
+                          : 'bg-slate-100 text-slate-800'
                       }`}
                     >
                       1
@@ -513,8 +507,8 @@ const Login = () => {
                     <div
                       className={`w-7 h-7 rounded-full flex items-center justify-center ${
                         requires2FA
-                          ? 'bg-emerald-600 text-white'
-                          : 'bg-emerald-100 text-emerald-700'
+                          ? 'bg-slate-900 text-white'
+                          : 'bg-slate-100 text-slate-800'
                       }`}
                     >
                       2
@@ -534,7 +528,7 @@ const Login = () => {
                   New to Vemapri?{' '}
                   <Link
                     to="/register"
-                    className="font-semibold text-emerald-600 hover:text-emerald-700"
+                    className="font-semibold text-slate-900 hover:underline"
                   >
                     Create an account
                   </Link>
@@ -549,9 +543,8 @@ const Login = () => {
                       <button
                         onClick={() => handleSocialLogin('google')}
                         type="button"
-                        className="w-full flex justify-center items-center px-4 py-2 border border-gray-200 rounded-lg shadow-sm bg-white text-xs sm:text-sm font-medium text-gray-700 hover:bg-gray-50"
+                        className="w-full flex justify-center items-center px-4 py-2 border border-gray-200 rounded-lg shadow-sm bg-white text-xs sm:text-sm font-medium text-gray-800 hover:bg-gray-50"
                       >
-                        {/* Google icon */}
                         <svg
                           className="w-5 h-5 mr-2"
                           viewBox="0 0 24 24"
@@ -580,9 +573,8 @@ const Login = () => {
                       <button
                         onClick={() => handleSocialLogin('facebook')}
                         type="button"
-                        className="w-full flex justify-center items-center px-4 py-2 border border-gray-200 rounded-lg shadow-sm bg-white text-xs sm:text-sm font-medium text-gray-700 hover:bg-gray-50"
+                        className="w-full flex justify-center items-center px-4 py-2 border border-gray-200 rounded-lg shadow-sm bg-white text-xs sm:text-sm font-medium text-gray-800 hover:bg-gray-50"
                       >
-                        {/* Facebook icon */}
                         <svg
                           className="w-5 h-5 mr-2"
                           fill="#1877F2"
@@ -652,7 +644,7 @@ const Login = () => {
                             id="remember-me"
                             name="remember-me"
                             type="checkbox"
-                            className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-300 rounded"
+                            className="h-4 w-4 text-slate-900 focus:ring-slate-900 border-gray-300 rounded"
                           />
                           <label
                             htmlFor="remember-me"
@@ -665,7 +657,7 @@ const Login = () => {
                         <div className="text-xs sm:text-sm">
                           <Link
                             to="/forgot-password"
-                            className="font-medium text-emerald-600 hover:text-emerald-700"
+                            className="font-medium text-slate-900 hover:underline"
                           >
                             Forgot your password?
                           </Link>
@@ -675,7 +667,7 @@ const Login = () => {
                       <button
                         type="submit"
                         disabled={loading}
-                        className="w-full btn btn-primary mt-1 disabled:opacity-60"
+                        className="w-full mt-1 inline-flex items-center justify-center rounded-full bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-black disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
                       >
                         {loading ? 'Signing in...' : 'Sign in'}
                       </button>
@@ -713,14 +705,14 @@ const Login = () => {
                       <button
                         type="button"
                         onClick={() => setRequires2FA(false)}
-                        className="flex-1 btn btn-secondary"
+                        className="flex-1 inline-flex items-center justify-center rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50 transition-colors"
                       >
                         Back
                       </button>
                       <button
                         type="submit"
                         disabled={loading}
-                        className="flex-1 btn btn-primary"
+                        className="flex-1 inline-flex items-center justify-center rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-black disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
                       >
                         {loading ? 'Verifying...' : 'Verify'}
                       </button>
@@ -735,7 +727,7 @@ const Login = () => {
               New to Vemapri?{' '}
               <Link
                 to="/register"
-                className="font-semibold text-emerald-600 hover:text-emerald-700"
+                className="font-semibold text-slate-900 hover:underline"
               >
                 Create an account
               </Link>
@@ -748,4 +740,3 @@ const Login = () => {
 };
 
 export default Login;
-

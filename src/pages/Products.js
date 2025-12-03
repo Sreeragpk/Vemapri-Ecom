@@ -173,14 +173,14 @@ const Products = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 via-slate-100/60 to-white">
+      <div className="max-w-[107rem] mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
           <div>
-            <p className="inline-flex items-center text-xs font-semibold uppercase tracking-wide text-emerald-700 mb-1">
-              <span className="h-2 w-2 rounded-full bg-emerald-500 mr-2" />
-              Grocery & Staples
+            <p className="inline-flex items-center text-[10px] sm:text-xs font-semibold uppercase tracking-[0.16em] text-slate-600 mb-1">
+              <span className="h-1.5 w-1.5 rounded-full bg-amber-500 mr-2" />
+              Grocery &amp; Staples
             </p>
             <h1 className="text-2xl md:text-3xl font-semibold text-slate-900">
               Shop essential groceries
@@ -202,40 +202,42 @@ const Products = () => {
           </div>
         </div>
 
-        {/* Active filters chips */}
+        {/* Active filters chips (left aligned, subtle) */}
         {activeFilterChips.length > 0 && (
           <div className="flex flex-wrap items-center gap-2 mb-4">
             {activeFilterChips.map((chip) => (
               <button
                 key={chip.key}
                 onClick={() => removeChip(chip.key)}
-                className="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700 ring-1 ring-emerald-100 hover:bg-emerald-100"
+                className="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-800 ring-1 ring-slate-200 hover:bg-slate-200 transition-colors"
               >
                 <span>{chip.label}</span>
-                <span className="ml-2 text-emerald-500">×</span>
+                <span className="ml-2 text-slate-500 text-sm leading-none">
+                  ×
+                </span>
               </button>
             ))}
             <button
               onClick={clearFilters}
-              className="text-xs font-medium text-slate-500 hover:text-slate-700"
+              className="text-xs font-medium text-slate-500 hover:text-slate-800"
             >
               Clear all
             </button>
           </div>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-          {/* Filters Sidebar */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-8 items-start">
+          {/* Filters Sidebar (left) */}
           <div className={`${showFilters ? 'block' : 'hidden'} md:block`}>
             <div className="bg-white rounded-2xl border border-slate-200 shadow-sm sticky top-20 p-4 sm:p-5">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-base font-semibold text-slate-900 flex items-center gap-2">
-                  <Filter size={18} className="text-emerald-600" />
+                  <Filter size={18} className="text-slate-600" />
                   Filters
                 </h2>
                 <button
                   onClick={clearFilters}
-                  className="text-xs font-medium text-emerald-600 hover:text-emerald-700"
+                  className="text-xs font-medium text-slate-600 hover:text-slate-900"
                 >
                   Reset
                 </button>
@@ -258,7 +260,7 @@ const Products = () => {
                   />
                   <button
                     type="submit"
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700"
                   >
                     <Search size={18} />
                   </button>
@@ -322,7 +324,7 @@ const Products = () => {
                       onChange={(e) =>
                         handleFilterChange('isOrganic', e.target.value)
                       }
-                      className="h-4 w-4 text-emerald-600 border-slate-300"
+                      className="h-4 w-4 text-slate-900 border-slate-300"
                     />
                     <span className="ml-2 text-slate-700">All</span>
                   </label>
@@ -335,7 +337,7 @@ const Products = () => {
                       onChange={(e) =>
                         handleFilterChange('isOrganic', e.target.value)
                       }
-                      className="h-4 w-4 text-emerald-600 border-slate-300"
+                      className="h-4 w-4 text-slate-900 border-slate-300"
                     />
                     <span className="ml-2 text-slate-700">Organic only</span>
                   </label>
@@ -348,7 +350,7 @@ const Products = () => {
                       onChange={(e) =>
                         handleFilterChange('isOrganic', e.target.value)
                       }
-                      className="h-4 w-4 text-emerald-600 border-slate-300"
+                      className="h-4 w-4 text-slate-900 border-slate-300"
                     />
                     <span className="ml-2 text-slate-700">Non-organic</span>
                   </label>
@@ -368,9 +370,9 @@ const Products = () => {
                   className="input text-sm"
                 >
                   <option value="">Any rating</option>
-                  <option value="3">3★ & above</option>
-                  <option value="4">4★ & above</option>
-                  <option value="4.5">4.5★ & above</option>
+                  <option value="3">3★ &amp; above</option>
+                  <option value="4">4★ &amp; above</option>
+                  <option value="4.5">4.5★ &amp; above</option>
                 </select>
               </div>
 
@@ -403,12 +405,13 @@ const Products = () => {
             </div>
           </div>
 
-          {/* Products Grid + Sort */}
+          {/* Products Grid + Sort (right) */}
           <div className="md:col-span-3">
-            {/* Sort */}
+            {/* Sort row */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-5 gap-3">
               <p className="text-xs sm:text-sm text-slate-500">
-                Showing page {pagination.currentPage} of {pagination.totalPages}
+                Showing page {pagination.currentPage} of{' '}
+                {pagination.totalPages}
               </p>
               <div className="flex items-center gap-2">
                 <label className="text-xs sm:text-sm font-medium text-slate-700">
@@ -429,36 +432,37 @@ const Products = () => {
             </div>
 
             {loading ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-7">
                 {[...Array(6)].map((_, i) => (
                   <div
                     key={i}
                     className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm animate-pulse"
                   >
-                    <div className="h-40 bg-slate-200 rounded-xl mb-4" />
+                    <div className="h-48 bg-slate-200 rounded-xl mb-4" />
                     <div className="h-4 bg-slate-200 rounded w-3/4 mb-2" />
                     <div className="h-4 bg-slate-100 rounded w-1/2" />
                   </div>
                 ))}
               </div>
             ) : products.length === 0 ? (
-              <div className="bg-white rounded-2xl border border-dashed border-slate-200 py-12 px-4 text-center shadow-sm">
-                <p className="text-slate-600 text-base mb-2">
+              <div className="bg-white rounded-2xl border border-dashed border-slate-200 py-10 px-6 text-left shadow-sm">
+                <p className="text-slate-700 text-base mb-2">
                   No products match your filters
                 </p>
-                <p className="text-xs text-slate-500 mb-4">
+                <p className="text-xs text-slate-500 mb-4 max-w-md">
                   Try adjusting the filters or clearing them to see more items.
                 </p>
                 <button
                   onClick={clearFilters}
-                  className="inline-flex items-center justify-center rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-emerald-700"
+                  className="inline-flex items-center justify-center rounded-full bg-slate-900 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-black transition-colors"
                 >
                   Clear filters
                 </button>
               </div>
             ) : (
               <>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {/* Bigger-feeling cards by reducing columns on large screens */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-7">
                   {products.map((product) => (
                     <ProductCard key={product._id} product={product} />
                   ))}
@@ -492,9 +496,9 @@ const Products = () => {
                               currentPage: page,
                             }))
                           }
-                          className={`px-3 py-2 text-xs sm:text-sm rounded-full border ${
+                          className={`px-3 py-2 text-xs sm:text-sm rounded-full border transition-colors ${
                             isActive
-                              ? 'bg-emerald-600 text-white border-emerald-600'
+                              ? 'bg-slate-900 text-white border-slate-900'
                               : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
                           }`}
                         >

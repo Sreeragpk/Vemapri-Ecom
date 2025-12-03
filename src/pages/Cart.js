@@ -289,9 +289,7 @@ const Cart = () => {
   };
 
   const calculateTax = () => getCartTotal() * 0.18; // 18% GST
-
   const calculateShipping = () => (getCartTotal() > 500 ? 0 : 80);
-
   const calculateTotal = () =>
     getCartTotal() + calculateTax() + calculateShipping();
 
@@ -304,21 +302,21 @@ const Cart = () => {
   // Empty cart view
   if (cartItems.length === 0) {
     return (
-      <div className="min-h-[70vh] bg-gradient-to-br from-slate-50 via-emerald-50/20 to-white">
+      <div className="min-h-[70vh] bg-gradient-to-br from-slate-50 via-slate-100 to-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 flex flex-col items-center text-center">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-emerald-50 text-emerald-600 mb-4 shadow-sm">
+          <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-slate-900/5 text-slate-900 mb-4 shadow-sm">
             <ShoppingBag size={36} />
           </div>
           <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-2">
             Your cart is empty
           </h2>
           <p className="text-slate-500 mb-6 max-w-md text-sm sm:text-base">
-            Looks like you haven&rsquo;t added anything yet. Explore our products and
-            start your order.
+            Looks like you haven&apos;t added anything yet. Explore our products
+            and start your order.
           </p>
           <Link
             to="/products"
-            className="inline-flex items-center justify-center rounded-full bg-emerald-600 px-6 py-2.5 text-sm font-semibold text-white shadow-md hover:bg-emerald-700"
+            className="inline-flex items-center justify-center rounded-full bg-slate-900 px-6 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-black transition-colors"
           >
             Browse products
           </Link>
@@ -328,7 +326,7 @@ const Cart = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-emerald-50/20 to-white">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100/60 to-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header + step indicator */}
         <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -341,23 +339,24 @@ const Cart = () => {
             </p>
           </div>
 
+          {/* Stepper */}
           <div className="flex items-center gap-2 text-xs sm:text-sm font-medium text-slate-500">
             <div className="flex items-center gap-1">
-              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-600 text-[10px] font-bold text-white">
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-900 text-[10px] font-bold text-white">
                 1
               </span>
               <span>Cart</span>
             </div>
             <span className="h-px w-6 bg-slate-300" />
             <div className="flex items-center gap-1 opacity-80">
-              <span className="flex h-6 w-6 items-center justify-center rounded-full border border-slate-300 text-[10px] font-bold text-slate-500">
+              <span className="flex h-6 w-6 items-center justify-center rounded-full border border-slate-400 text-[10px] font-bold text-slate-600">
                 2
               </span>
               <span>Address &amp; payment</span>
             </div>
             <span className="h-px w-6 bg-slate-300" />
             <div className="flex items-center gap-1 opacity-60">
-              <span className="flex h-6 w-6 items-center justify-center rounded-full border border-slate-200 text-[10px] font-bold text-slate-400">
+              <span className="flex h-6 w-6 items-center justify-center rounded-full border border-slate-300 text-[10px] font-bold text-slate-400">
                 3
               </span>
               <span>Confirmation</span>
@@ -371,7 +370,7 @@ const Cart = () => {
             <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
               <div className="px-4 sm:px-6 py-3 border-b border-slate-100 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-900/5 text-slate-900">
                     <ShoppingBag size={18} />
                   </div>
                   <div>
@@ -386,7 +385,7 @@ const Cart = () => {
                 </div>
                 <button
                   onClick={clearCart}
-                  className="text-xs font-medium text-slate-400 hover:text-red-500"
+                  className="text-xs font-medium text-slate-400 hover:text-rose-500 transition-colors"
                 >
                   Clear cart
                 </button>
@@ -427,7 +426,7 @@ const Cart = () => {
                       <div className="flex-1 min-w-0">
                         <Link
                           to={`/products/${item.product._id}`}
-                          className="text-sm sm:text-base font-semibold text-slate-900 hover:text-emerald-600 line-clamp-2"
+                          className="text-sm sm:text-base font-semibold text-slate-900 hover:text-slate-700 line-clamp-2 transition-colors"
                         >
                           {item.product.name}
                         </Link>
@@ -436,7 +435,7 @@ const Cart = () => {
                         </p>
 
                         <div className="mt-2 flex flex-wrap items-center gap-2">
-                          <span className="text-base font-bold text-emerald-700">
+                          <span className="text-base font-bold text-slate-900">
                             ₹{price.toLocaleString()}
                           </span>
                           {item.product.discountPrice && (
@@ -444,7 +443,7 @@ const Cart = () => {
                               <span className="text-xs text-slate-400 line-through">
                                 ₹{item.product.price.toLocaleString()}
                               </span>
-                              <span className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700">
+                              <span className="inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700 border border-amber-100">
                                 <Tag size={12} className="mr-1" />
                                 Save ₹
                                 {(
@@ -466,7 +465,7 @@ const Cart = () => {
                             <p className="text-[11px] text-amber-800 leading-snug">
                               Only {hasError.available} unit
                               {hasError.available === 1 ? '' : 's'} available.
-                              You&rsquo;ve requested {hasError.requested}. Please
+                              You&apos;ve requested {hasError.requested}. Please
                               reduce the quantity to continue.
                             </p>
                           </div>
@@ -485,7 +484,7 @@ const Cart = () => {
                               )
                             }
                             disabled={isMinQty}
-                            className="flex h-7 w-7 items-center justify-center rounded-full text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed"
+                            className="flex h-7 w-7 items-center justify-center rounded-full text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                           >
                             <Minus size={14} />
                           </button>
@@ -500,7 +499,7 @@ const Cart = () => {
                               )
                             }
                             disabled={isMaxQty}
-                            className="flex h-7 w-7 items-center justify-center rounded-full text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed"
+                            className="flex h-7 w-7 items-center justify-center rounded-full text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                           >
                             <Plus size={14} />
                           </button>
@@ -517,7 +516,7 @@ const Cart = () => {
                         {/* Remove Button */}
                         <button
                           onClick={() => removeFromCart(item.product._id)}
-                          className="inline-flex items-center gap-1 text-xs font-medium text-slate-400 hover:text-red-500"
+                          className="inline-flex items-center gap-1 text-xs font-medium text-slate-400 hover:text-rose-500 transition-colors"
                         >
                           <Trash2 size={14} />
                           Remove
@@ -533,11 +532,11 @@ const Cart = () => {
           {/* Order Summary */}
           <div className="lg:col-span-1">
             <div className="sticky top-20">
-              <div className="rounded-2xl border border-emerald-100 bg-white shadow-md overflow-hidden">
-                <div className="bg-gradient-to-r from-emerald-500 to-emerald-600 px-4 py-3 text-white">
+              <div className="rounded-2xl border border-slate-200 bg-white shadow-md overflow-hidden">
+                <div className="bg-slate-900 px-4 py-3 text-white">
                   <h2 className="text-lg font-semibold">Order summary</h2>
-                  <p className="text-[11px] text-emerald-100">
-                    Taxes and shipping calculated based on your cart value.
+                  <p className="text-[11px] text-slate-300">
+                    Taxes and shipping are calculated based on your cart value.
                   </p>
                 </div>
 
@@ -545,14 +544,14 @@ const Cart = () => {
                   <div className="space-y-3 mb-4 text-sm">
                     <div className="flex justify-between">
                       <span className="text-slate-600">Subtotal</span>
-                      <span className="font-semibold">
+                      <span className="font-semibold text-slate-900">
                         ₹{getCartTotal().toLocaleString()}
                       </span>
                     </div>
 
                     <div className="flex justify-between">
                       <span className="text-slate-600">Tax (18% GST)</span>
-                      <span className="font-semibold">
+                      <span className="font-semibold text-slate-900">
                         ₹{calculateTax().toLocaleString()}
                       </span>
                     </div>
@@ -564,7 +563,7 @@ const Cart = () => {
                       </span>
                       <span className="font-semibold">
                         {calculateShipping() === 0 ? (
-                          <span className="text-emerald-600">FREE</span>
+                          <span className="text-amber-600">FREE</span>
                         ) : (
                           `₹${calculateShipping()}`
                         )}
@@ -573,12 +572,13 @@ const Cart = () => {
 
                     {/* Free shipping hint */}
                     {getCartTotal() > 0 && remainingForFreeShipping > 0 && (
-                      <div className="mt-1 flex items-start gap-2 rounded-lg bg-emerald-50 px-2.5 py-2 text-[11px] text-emerald-800">
-                        <Truck size={14} className="mt-0.5" />
+                      <div className="mt-1 flex items-start gap-2 rounded-lg bg-slate-900/5 px-2.5 py-2 text-[11px] text-slate-800 border border-slate-200">
+                        <Truck size={14} className="mt-0.5 text-slate-500" />
                         <p>
                           Add ₹
                           {remainingForFreeShipping.toLocaleString()} more to
-                          unlock <span className="font-semibold">free shipping</span>.
+                          unlock{' '}
+                          <span className="font-semibold">free shipping</span>.
                         </p>
                       </div>
                     )}
@@ -600,7 +600,7 @@ const Cart = () => {
                       <span className="text-sm font-semibold text-slate-900">
                         Total payable
                       </span>
-                      <span className="text-xl font-bold text-emerald-700">
+                      <span className="text-xl font-bold text-slate-900">
                         ₹{calculateTotal().toLocaleString()}
                       </span>
                     </div>
@@ -613,7 +613,11 @@ const Cart = () => {
                   <button
                     onClick={handleCheckout}
                     disabled={hasStockIssues}
-                    className={`w-full rounded-full bg-gradient-to-r from-emerald-600 via-emerald-500 to-lime-500 px-4 py-2.5 text-sm font-semibold text-white shadow-md hover:from-emerald-700 hover:via-emerald-600 hover:to-lime-500 disabled:cursor-not-allowed disabled:opacity-60`}
+                    className={`w-full rounded-full px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors ${
+                      hasStockIssues
+                        ? 'bg-slate-400 cursor-not-allowed'
+                        : 'bg-slate-900 hover:bg-black'
+                    }`}
                   >
                     {hasStockIssues
                       ? 'Resolve stock issues to continue'
@@ -622,7 +626,7 @@ const Cart = () => {
 
                   <Link
                     to="/products"
-                    className="mt-3 block w-full rounded-full border border-slate-200 bg-white px-4 py-2.5 text-center text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                    className="mt-3 block w-full rounded-full border border-slate-200 bg-white px-4 py-2.5 text-center text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
                   >
                     Continue shopping
                   </Link>

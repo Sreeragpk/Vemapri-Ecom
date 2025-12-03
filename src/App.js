@@ -181,6 +181,9 @@ import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
 
+// NEW
+import ScrollToTop from './components/ScrollToTop';
+
 // Layout Components
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
@@ -219,11 +222,12 @@ import NotFound from './pages/NotFound';
 const ProtectedRoute = ({ children, adminOnly = false }) => {
   const { user, loading } = useAuth();
 
-  if (loading) return (
-    <div className="min-h-screen flex items-center justify-center">
-      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
-    </div>
-  );
+  if (loading)
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+      </div>
+    );
 
   if (!user) return <Navigate to="/login" />;
 
@@ -245,13 +249,14 @@ const PublicLayout = ({ children }) => (
 function App() {
   return (
     <Router>
+      {/* scroll to top on every route change */}
+      <ScrollToTop />
+
       <AuthProvider>
         <CartProvider>
-
           <Toaster position="top-right" toastOptions={{ duration: 3000 }} />
 
           <Routes>
-
             {/* ========== Public Routes ========== */}
             <Route path="/" element={<PublicLayout><Home /></PublicLayout>} />
             <Route path="/products" element={<PublicLayout><Products /></PublicLayout>} />
@@ -262,10 +267,23 @@ function App() {
             <Route path="/privacy" element={<PublicLayout><PrivacyPolicy /></PublicLayout>} />
             <Route path="/contact" element={<PublicLayout><ContactUs /></PublicLayout>} />
 
-
             {/* ========== Customer Protected Routes ========== */}
-            <Route path="/checkout" element={<ProtectedRoute><PublicLayout><Checkout /></PublicLayout></ProtectedRoute>} />
-            <Route path="/orders" element={<ProtectedRoute><PublicLayout><Orders /></PublicLayout></ProtectedRoute>} />
+            <Route
+              path="/checkout"
+              element={
+                <ProtectedRoute>
+                  <PublicLayout><Checkout /></PublicLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/orders"
+              element={
+                <ProtectedRoute>
+                  <PublicLayout><Orders /></PublicLayout>
+                </ProtectedRoute>
+              }
+            />
 
             {/* Customer Order Detail */}
             <Route
@@ -277,12 +295,24 @@ function App() {
               }
             />
 
-            <Route path="/profile" element={<ProtectedRoute><PublicLayout><Profile /></PublicLayout></ProtectedRoute>} />
-
+            <Route
+              path="/profile"
+              element={
+                <ProtectedRoute>
+                  <PublicLayout><Profile /></PublicLayout>
+                </ProtectedRoute>
+              }
+            />
 
             {/* ========== Admin Routes ========== */}
-            <Route path="/admin" element={<ProtectedRoute adminOnly><AdminLayout /></ProtectedRoute>}>
-
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute adminOnly>
+                  <AdminLayout />
+                </ProtectedRoute>
+              }
+            >
               <Route index element={<AdminDashboard />} />
               <Route path="users" element={<AdminUsers />} />
               <Route path="users/:id" element={<AdminUsers />} />
@@ -295,12 +325,9 @@ function App() {
               <Route path="orders/:id" element={<AdminOrderDetail />} />
             </Route>
 
-
             {/* 404 */}
             <Route path="*" element={<PublicLayout><NotFound /></PublicLayout>} />
-
           </Routes>
-
         </CartProvider>
       </AuthProvider>
     </Router>
