@@ -359,7 +359,7 @@ import {
   CheckCircle2,
   Clock,
 } from 'lucide-react';
-import ordersBg from '../assets/ordersbg.png';
+import ordersBg from '../assets/ordersbg.webp';
 
 const Orders = () => {
   const { user } = useAuth();

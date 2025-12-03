@@ -348,7 +348,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../utils/api';
 import ProductCard from '../components/ProductCard';
-import newImage from '../assets/newimg.png'; // change extension if needed
+import newImage from '../assets/newimg.webp'; // change extension if needed
 import { Truck, Shield, Leaf, CheckCircle2 } from 'lucide-react';
 
 const Home = () => {

@@ -13,15 +13,21 @@ import {
   Star,
 } from 'lucide-react';
 
+// adjust this path if your assets folder is in a different place
+import adminProductsBanner from '../../assets/adminproducts.webp';
+
 const AdminProducts = () => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // 🔹 Default isActive is "all" so admin sees both Active + Inactive by default
   const [filters, setFilters] = useState({
     search: '',
     category: '',
-    isActive: '',
+    isActive: 'all', // "all" | "true" | "false"
     isOrganic: '',
   });
+
   const [pagination, setPagination] = useState({
     currentPage: 1,
     totalPages: 1,
@@ -36,22 +42,28 @@ const AdminProducts = () => {
   const fetchProducts = async () => {
     setLoading(true);
     try {
+      // Build params, but don't send isActive when it's "all"
+      const filteredEntries = Object.entries(filters).filter(
+        ([key, value]) =>
+          value !== '' && !(key === 'isActive' && value === 'all')
+      );
+
       const params = {
         page: pagination.currentPage,
         limit: 20,
-        ...Object.fromEntries(
-          Object.entries(filters).filter(([_, v]) => v !== '')
-        ),
+        ...Object.fromEntries(filteredEntries),
       };
 
       const res = await api.get('/products', { params });
-      setProducts(res.data.products);
+
+      setProducts(res.data.products || []);
       setPagination({
-        currentPage: Number(res.data.currentPage),
-        totalPages: res.data.totalPages,
-        totalProducts: res.data.totalProducts,
+        currentPage: Number(res.data.currentPage) || 1,
+        totalPages: res.data.totalPages || 1,
+        totalProducts: res.data.totalProducts || 0,
       });
     } catch (error) {
+      console.error(error);
       toast.error('Failed to fetch products');
     } finally {
       setLoading(false);
@@ -62,8 +74,10 @@ const AdminProducts = () => {
     try {
       await api.put(`/products/${productId}`, { isActive: !currentStatus });
       toast.success('Product status updated');
+      // refetch with current filters (including isActive)
       fetchProducts();
     } catch (error) {
+      console.error(error);
       toast.error('Failed to update product');
     }
   };
@@ -78,6 +92,7 @@ const AdminProducts = () => {
       toast.success('Product deleted successfully');
       fetchProducts();
     } catch (error) {
+      console.error(error);
       toast.error('Failed to delete product');
     }
   };
@@ -91,47 +106,125 @@ const AdminProducts = () => {
     setFilters({
       search: '',
       category: '',
-      isActive: '',
+      isActive: 'all', // reset to all status
       isOrganic: '',
     });
     setPagination((prev) => ({ ...prev, currentPage: 1 }));
   };
 
+  // Simple stats from current page (for hero chips)
+  const activeCount = products.filter((p) => p.isActive).length;
+  const organicCount = products.filter((p) => p.isOrganic).length;
+  const lowStockCount = products.filter(
+    (p) => p.stock > 0 && p.stock <= 5
+  ).length;
+  const outOfStockCount = products.filter((p) => p.stock <= 0).length;
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
-      {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-semibold text-slate-900 tracking-tight">
-            Products
-          </h1>
-          <p className="mt-1 text-xs sm:text-sm text-slate-500">
-            Manage Vemapri grocery & staples catalogue, pricing and inventory.
-          </p>
+      {/* Top Hero / Banner */}
+      <div className="relative overflow-hidden rounded-3xl border border-emerald-100/60 bg-slate-950 text-white shadow-lg">
+        {/* Background image + gradient overlay */}
+        <div className="absolute inset-0">
+          <img
+            src={adminProductsBanner}
+            alt="Products overview"
+            className="w-full h-full object-cover opacity-60"
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-slate-950/90 via-slate-950/70 to-emerald-900/70" />
         </div>
-        <div className="flex items-center gap-3">
-          <span className="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700 border border-emerald-100">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 mr-1.5" />
-            {pagination.totalProducts} total products
-          </span>
-          <Link
-            to="/admin/products/new"
-            className="inline-flex items-center rounded-full bg-gradient-to-r from-emerald-500 via-lime-500 to-amber-400 px-4 py-2 text-xs sm:text-sm font-semibold text-slate-900 shadow-sm hover:shadow-md transition-all"
-          >
-            <Plus size={16} className="mr-2" />
-            Add Product
-          </Link>
+
+        <div className="relative px-6 sm:px-8 py-6 sm:py-8 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+          {/* Left: Title + description */}
+          <div>
+            <div className="inline-flex items-center gap-2 rounded-full bg-emerald-500/10 border border-emerald-400/50 px-3 py-1 mb-3">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="text-xs font-medium text-emerald-100">
+                Catalogue Control Center
+              </span>
+            </div>
+
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-semibold tracking-tight">
+              Products Dashboard
+            </h1>
+            <p className="mt-2 text-xs sm:text-sm text-emerald-50/80 max-w-xl">
+              Manage Vemapri&apos;s grocery &amp; staples catalogue, pricing, visibility and
+              inventory from a single, streamlined interface.
+            </p>
+
+            {/* Stats chips */}
+            <div className="mt-4 flex flex-wrap gap-2 text-[11px] sm:text-xs">
+              <span className="inline-flex items-center gap-1 rounded-full bg-slate-900/60 border border-emerald-400/30 px-3 py-1">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                <span className="font-semibold">
+                  {pagination.totalProducts.toLocaleString()}
+                </span>
+                <span className="text-emerald-50/80">total products</span>
+              </span>
+
+              <span className="inline-flex items-center gap-1 rounded-full bg-slate-900/60 border border-emerald-400/20 px-3 py-1">
+                <Eye className="w-3 h-3" />
+                <span className="font-semibold">{activeCount}</span>
+                <span className="text-emerald-50/80">active</span>
+              </span>
+
+              <span className="inline-flex items-center gap-1 rounded-full bg-slate-900/60 border border-emerald-400/20 px-3 py-1">
+                <Leaf className="w-3 h-3" />
+                <span className="font-semibold">{organicCount}</span>
+                <span className="text-emerald-50/80">organic range</span>
+              </span>
+
+              <span className="inline-flex items-center gap-1 rounded-full bg-slate-900/60 border border-amber-400/30 px-3 py-1">
+                <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
+                <span className="font-semibold">{lowStockCount}</span>
+                <span className="text-emerald-50/80">low stock</span>
+              </span>
+
+              {outOfStockCount > 0 && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-slate-900/60 border border-rose-400/40 px-3 py-1">
+                  <span className="h-1.5 w-1.5 rounded-full bg-rose-400" />
+                  <span className="font-semibold">{outOfStockCount}</span>
+                  <span className="text-emerald-50/80">out of stock</span>
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Right: Primary action + loader */}
+          <div className="flex flex-col items-end gap-2">
+            {loading && (
+              <div className="flex items-center gap-2 text-[11px] sm:text-xs text-emerald-50/80">
+                <span className="h-3 w-3 rounded-full border border-emerald-200/70 border-t-transparent animate-spin" />
+                <span>Loading products…</span>
+              </div>
+            )}
+
+            {/* 🔸 Updated button: neutral dark, no green gradient */}
+            <Link
+              to="/admin/products/new"
+              className="inline-flex items-center rounded-full bg-slate-900 px-5 py-2.5 text-xs sm:text-sm font-semibold text-slate-50 shadow-md hover:bg-slate-800 hover:shadow-lg transition-all"
+            >
+              <Plus size={16} className="mr-2" />
+              Add New Product
+            </Link>
+            <p className="text-[11px] text-emerald-50/80">
+              Keep adding fresh SKUs to grow the catalogue.
+            </p>
+          </div>
         </div>
       </div>
 
       {/* Filters */}
-      <div className="rounded-2xl bg-white/90 border border-emerald-100/80 shadow-sm p-4 sm:p-5">
-        <div className="flex items-center justify-between mb-4 gap-3">
+      <div className="rounded-2xl bg-white/95 border border-emerald-100/80 shadow-sm p-4 sm:p-5">
+        <div className="flex flex-wrap items-center justify-between mb-4 gap-3">
           <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
             <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100">
               <Search size={16} />
             </span>
             <span>Filter products</span>
+            <span className="hidden sm:inline-block text-xs text-slate-400">
+              Narrow down by text, category, status and type.
+            </span>
           </div>
           <button
             onClick={clearFilters}
@@ -178,7 +271,8 @@ const AdminProducts = () => {
             onChange={(e) => handleFilterChange('isActive', e.target.value)}
             className="input text-sm"
           >
-            <option value="">All Status</option>
+            {/* 🔹 "all" is interpreted as no isActive filter */}
+            <option value="all">All Status</option>
             <option value="true">Active</option>
             <option value="false">Inactive</option>
           </select>
@@ -229,7 +323,7 @@ const AdminProducts = () => {
             return (
               <div
                 key={product._id}
-                className="rounded-2xl border border-emerald-50 bg-white/90 shadow-sm hover:shadow-md transition-all p-4 flex flex-col"
+                className="rounded-2xl border border-emerald-50 bg-white/90 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all p-4 flex flex-col"
               >
                 {/* Image */}
                 <div className="relative h-40 bg-slate-50 rounded-xl mb-4 overflow-hidden flex items-center justify-center">
