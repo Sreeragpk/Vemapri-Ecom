@@ -220,6 +220,7 @@ import NotFound from './pages/NotFound';
 import FAQ from './pages/Faq';
 import DeliveryInfo from './pages/DeliveryInfo';
 import TermsOfService from './pages/TermsofService';
+import About from './pages/About';
 
 // Protected Route
 const ProtectedRoute = ({ children, adminOnly = false }) => {
@@ -272,6 +273,7 @@ function App() {
             <Route path="/faq" element={<PublicLayout><FAQ /></PublicLayout>} />
             <Route path="/shipping" element={<PublicLayout><DeliveryInfo /></PublicLayout>} />
              <Route path="/terms" element={<PublicLayout><TermsOfService /></PublicLayout>} />
+             <Route path="/about" element={<PublicLayout><About /></PublicLayout>} />
 
             {/* ========== Customer Protected Routes ========== */}
             <Route
