@@ -20,6 +20,7 @@ import {
   Zap,
   Sunrise
 } from 'lucide-react';
+import adminProductsImage from '../assets/adminproducts.webp';
 
 const About = () => {
   const stats = [
@@ -31,7 +32,7 @@ const About = () => {
     },
     {
       icon: ShoppingBag,
-      value: '1,00+',
+      value: '100+',
       label: 'Orders Delivered',
       color: 'emerald'
     },
@@ -74,31 +75,31 @@ const About = () => {
 
   const milestones = [
     {
-      year: '2025',
+      year: '2024',
       month: 'June',
       title: 'The Dream Begins',
       description: 'Vemapri was founded with a vision to bring authentic, quality groceries to Bengaluru households at honest prices.'
     },
     {
-      year: '2025',
+      year: '2024',
       month: 'September',
       title: 'First Deliveries',
       description: 'Started operations in Electronic City area with our initial product range of essential spices, pulses, and grains.'
     },
     {
-      year: '2025',
+      year: '2024',
       month: 'October',
       title: 'Growing Trust',
-      description: 'Reached 100+ regular customers and expanded our product range based on customer feedback and demand.'
+      description: 'Reached 50+ regular customers and expanded our product range based on customer feedback and demand.'
     },
     {
-      year: '2025',
+      year: '2024',
       month: 'November',
       title: 'Community Building',
       description: 'Established partnerships with local farmers and introduced organic product line to serve health-conscious customers.'
     },
     {
-      year: '2025',
+      year: '2024',
       month: 'December',
       title: 'Expanding Reach',
       description: 'Now serving 100+ customers across Bengaluru with same-day delivery and a growing product catalog.'
@@ -143,9 +144,16 @@ const About = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-50">
-      {/* Hero Section */}
+      {/* Hero Section with Image */}
       <div className="relative bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white overflow-hidden">
-        <div className="absolute inset-0 bg-[url('/api/placeholder/1920/600')] opacity-10 bg-cover bg-center" />
+        <div className="absolute inset-0">
+          <img 
+            src={adminProductsImage} 
+            alt="Vemapri Products" 
+            className="w-full h-full object-cover opacity-80"
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-slate-900/80 via-slate-900/70 to-slate-900/90" />
+        </div>
         
         {/* Decorative elements */}
         <div className="absolute top-20 right-20 w-72 h-72 bg-amber-500/10 rounded-full blur-3xl" />
@@ -236,7 +244,7 @@ const About = () => {
           </div>
         </div>
 
-        {/* Our Story Section */}
+        {/* Our Story Section with Image */}
         <div className="mb-20">
           <div className="text-center mb-12">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-slate-100 border border-slate-200 mb-4">
@@ -253,29 +261,44 @@ const About = () => {
             </p>
           </div>
 
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8 md:p-12">
-            <div className="prose prose-lg max-w-none">
-              <p className="text-slate-700 leading-relaxed mb-6">
-                Vemapri was born in 2024 from a simple observation: Bengaluru families deserve better access 
-                to quality groceries without compromising on authenticity or breaking the bank. As locals ourselves, 
-                we understood the struggle of finding genuine products at fair prices with reliable delivery.
-              </p>
-              <p className="text-slate-700 leading-relaxed mb-6">
-                We started small—just a handful of essential products sourced from trusted local suppliers and farmers 
-                in Karnataka. What sets us apart isn't fancy marketing or big budgets; it's our genuine commitment to 
-                treating every customer like family. We test every product ourselves before offering it to you.
-              </p>
-              <p className="text-slate-700 leading-relaxed mb-6">
-                Being new in the market means we're hungry to prove ourselves. We listen to every piece of feedback, 
-                adapt quickly, and constantly improve. Our product range grows based on what YOU ask for. Your trust 
-                means everything to us, and we're working hard every day to earn it.
-              </p>
-              <p className="text-slate-700 leading-relaxed">
-                We're not just building a business; we're building a community. Every order helps us grow, every review 
-                helps us improve, and every satisfied customer inspires us to do better. Thank you for being part of our 
-                journey from the very beginning!
-              </p>
+          {/* Story with Image Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center mb-8">
+            <div className="order-2 lg:order-1">
+              <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
+                <div className="prose prose-lg max-w-none">
+                  <p className="text-slate-700 leading-relaxed mb-4">
+                    Vemapri was born in 2024 from a simple observation: Bengaluru families deserve better access 
+                    to quality groceries without compromising on authenticity or breaking the bank.
+                  </p>
+                  <p className="text-slate-700 leading-relaxed mb-4">
+                    We started small—just a handful of essential products sourced from trusted local suppliers and farmers 
+                    in Karnataka. What sets us apart is our genuine commitment to treating every customer like family.
+                  </p>
+                  <p className="text-slate-700 leading-relaxed">
+                    Being new in the market means we're hungry to prove ourselves. We listen to every piece of feedback, 
+                    adapt quickly, and constantly improve based on what YOU ask for.
+                  </p>
+                </div>
+              </div>
             </div>
+
+            <div className="order-1 lg:order-2">
+              <div className="rounded-2xl overflow-hidden border border-slate-200 shadow-lg">
+                <img 
+                  src={adminProductsImage} 
+                  alt="Vemapri Quality Products" 
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8 md:p-12">
+            <p className="text-slate-700 leading-relaxed text-center max-w-4xl mx-auto text-lg">
+              We're not just building a business; we're building a community. Every order helps us grow, every review 
+              helps us improve, and every satisfied customer inspires us to do better. Thank you for being part of our 
+              journey from the very beginning!
+            </p>
           </div>
         </div>
 
