@@ -730,7 +730,6 @@ const OrderDetail = () => {
   const [loading, setLoading] = useState(true);
   const [verifying, setVerifying] = useState(false);
 
-  // refs for mounted state and polling
   const mounted = useRef(false);
   const pollingRef = useRef(null);
   const pollAttempts = useRef(0);
@@ -746,7 +745,6 @@ const OrderDetail = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
-  // Fetch order details
   const fetchOrder = async () => {
     setLoading(true);
     try {
@@ -762,19 +760,14 @@ const OrderDetail = () => {
     }
   };
 
-  /**
-   * Attempt verification for a specific orderId.
-   * Returns true if verified, false otherwise.
-   * opts.silent = true suppresses toasts on not-verified / errors.
-   */
   const verifyPayment = async (orderId, opts = { silent: false }) => {
     if (!orderId) return null;
     try {
       if (mounted.current) setVerifying(true);
       const res = await api.post('/payments/verify', { orderId });
       if (res.data?.verified) {
-        if (!opts.silent) toast.success(res.data?.message || 'Payment verified');
-        // refresh order after verification
+        if (!opts.silent)
+          toast.success(res.data?.message || 'Payment verified');
         await fetchOrder();
         return true;
       } else {
@@ -785,9 +778,15 @@ const OrderDetail = () => {
         return false;
       }
     } catch (err) {
-      console.error('verify error:', err?.response?.data || err.message || err);
+      console.error(
+        'verify error:',
+        err?.response?.data || err.message || err
+      );
       if (!opts.silent) {
-        const msg = err?.response?.data?.message || err?.message || 'Failed to verify payment';
+        const msg =
+          err?.response?.data?.message ||
+          err?.message ||
+          'Failed to verify payment';
         toast.error(msg);
       }
       return false;
@@ -796,7 +795,6 @@ const OrderDetail = () => {
     }
   };
 
-  // stop and clear polling
   const stopPolling = () => {
     if (pollingRef.current) {
       clearInterval(pollingRef.current);
@@ -804,33 +802,26 @@ const OrderDetail = () => {
     }
   };
 
-  /**
-   * Start polling for an orderId.
-   * Performs one immediate silent verify then starts intervaled tries.
-   */
   const startPollingForPayment = async (optsOrder) => {
-    // prevent duplicate pollers
     if (pollingRef.current) return;
 
     const orderIdToVerify = optsOrder?._id || optsOrder?.id || id;
     if (!orderIdToVerify) return;
 
-    // reset attempts
     pollAttempts.current = 0;
 
-    // immediate attempt (silent) to avoid waiting for first interval tick
     try {
-      const alreadyVerified = await verifyPayment(orderIdToVerify, { silent: true });
+      const alreadyVerified = await verifyPayment(orderIdToVerify, {
+        silent: true,
+      });
       if (alreadyVerified) {
-        // verified -> no need to poll
         return;
       }
     } catch (e) {
       console.error('initial verify error', e);
-      // continue to polling even if initial attempt failed
     }
 
-    const intervalMs = 8000; // 8 sec
+    const intervalMs = 8000;
     const maxAttempts = 12;
 
     pollingRef.current = setInterval(async () => {
@@ -839,7 +830,6 @@ const OrderDetail = () => {
         return;
       }
 
-      // refresh order (to read latest paymentInfo)
       try {
         const fresh = await api.get(`/orders/${orderIdToVerify}`);
         if (!mounted.current) return;
@@ -847,19 +837,19 @@ const OrderDetail = () => {
 
         const info = fresh.data.paymentInfo || {};
         if (info.method !== 'cashfree' || info.status !== 'pending') {
-          // payment changed (completed/failed/different method) -> stop polling
           stopPolling();
           return;
         }
       } catch (err) {
         console.error('poll: failed to refresh order', err);
-        // continue to verification attempts below
       }
 
       pollAttempts.current += 1;
 
       try {
-        const verified = await verifyPayment(orderIdToVerify, { silent: true });
+        const verified = await verifyPayment(orderIdToVerify, {
+          silent: true,
+        });
         if (verified) {
           stopPolling();
           return;
@@ -870,26 +860,30 @@ const OrderDetail = () => {
 
       if (pollAttempts.current >= maxAttempts) {
         stopPolling();
-        toast('Still waiting for payment confirmation. Check your orders page later.', { icon: '⚠️' });
+        toast(
+          'Still waiting for payment confirmation. Check your orders page later.',
+          { icon: '⚠️' }
+        );
       }
     }, intervalMs);
   };
 
-  // Trigger polling when order becomes pending-cashfree
   useEffect(() => {
     if (!order) return;
 
-    if (order.paymentInfo?.method === 'cashfree' && order.paymentInfo?.status === 'pending') {
-      // start polling which will itself do one immediate verify + background checks
-      startPollingForPayment(order).catch((e) => console.error('startPolling error', e));
+    if (
+      order.paymentInfo?.method === 'cashfree' &&
+      order.paymentInfo?.status === 'pending'
+    ) {
+      startPollingForPayment(order).catch((e) =>
+        console.error('startPolling error', e)
+      );
     } else {
-      // not pending-cashfree anymore
       stopPolling();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [order]);
 
-  // helper functions (unchanged)
   const getStatusMeta = (status) => {
     const map = {
       pending: {
@@ -968,13 +962,16 @@ const OrderDetail = () => {
         methodLabel: 'Payment',
         statusLabel: 'N/A',
         chipClass: 'bg-slate-50 text-slate-700 ring-slate-100',
+        modeLabel: null,
       };
     }
 
-    const method = order.paymentInfo.method;
-    const status = order.paymentInfo.status;
+    const { method, status, paymentMode, cashfreePaymentMode } =
+      order.paymentInfo;
 
-    const methodLabel = method === 'cod' ? 'Cash on Delivery' : 'Online Payment';
+    const methodLabel =
+      method === 'cod' ? 'Cash on Delivery' : 'Online Payment';
+
     let statusLabel = status || 'Pending';
     let chipClass = 'bg-slate-50 text-slate-700 ring-slate-100';
 
@@ -989,7 +986,33 @@ const OrderDetail = () => {
       chipClass = 'bg-amber-50 text-amber-700 ring-amber-100';
     }
 
-    return { methodLabel, statusLabel, chipClass };
+    // Map normalized code or raw Cashfree code to user-friendly label
+    let modeLabel = null;
+
+    if (method !== 'cod') {
+      const normalized = (paymentMode || '').toLowerCase();
+      const raw = (cashfreePaymentMode || '').toUpperCase();
+
+      if (normalized === 'upi' || raw === 'UPI') {
+        modeLabel = 'UPI';
+      } else if (normalized === 'card' || raw.includes('CARD')) {
+        modeLabel = 'Credit / Debit Card';
+      } else if (
+        normalized === 'netbanking' ||
+        raw.includes('NETBANKING') ||
+        raw === 'NB'
+      ) {
+        modeLabel = 'Net Banking';
+      } else if (normalized === 'wallet' || raw.includes('WALLET')) {
+        modeLabel = 'Wallet';
+      } else if (normalized === 'emi' || raw.includes('EMI')) {
+        modeLabel = 'EMI';
+      } else if (normalized === 'other' && raw) {
+        modeLabel = raw;
+      }
+    }
+
+    return { methodLabel, statusLabel, chipClass, modeLabel };
   };
 
   const getLatestStatus = (orderObj) => {
@@ -1006,8 +1029,11 @@ const OrderDetail = () => {
     const latestStatus = getLatestStatus(orderObj);
 
     if (latestStatus === 'delivered') {
-      const deliveredHistory = orderObj.statusHistory?.find((s) => s.status === 'delivered');
-      const deliveredDate = deliveredHistory?.changedAt || orderObj.deliveredAt;
+      const deliveredHistory = orderObj.statusHistory?.find(
+        (s) => s.status === 'delivered'
+      );
+      const deliveredDate =
+        deliveredHistory?.changedAt || orderObj.deliveredAt;
 
       if (deliveredDate) {
         return {
@@ -1079,11 +1105,12 @@ const OrderDetail = () => {
   const deliveryMeta = getDeliveryMeta(order);
   const DeliveryIcon = deliveryMeta?.icon;
 
-  // Manual refresh handler (also tries to verify if needed)
   const handleRefresh = async () => {
     await fetchOrder();
-    if (order?.paymentInfo?.method === 'cashfree' && order?.paymentInfo?.status === 'pending') {
-      // explicit manual verify using explicit id to avoid stale closure
+    if (
+      order?.paymentInfo?.method === 'cashfree' &&
+      order?.paymentInfo?.status === 'pending'
+    ) {
       await verifyPayment(order._id || order.id || id);
       await fetchOrder();
     }
@@ -1102,7 +1129,6 @@ const OrderDetail = () => {
             Back to Orders
           </button>
 
-          {/* Refresh */}
           <div className="flex items-center gap-2">
             <button
               onClick={handleRefresh}
@@ -1126,20 +1152,33 @@ const OrderDetail = () => {
               </h1>
               <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs sm:text-sm text-slate-500">
                 <span>Placed on {formatDateTime(order.createdAt)}</span>
-                <span className="hidden sm:inline-block text-slate-300">•</span>
+                <span className="hidden sm:inline-block text-slate-300">
+                  •
+                </span>
                 <span>
                   {Array.isArray(order.items) ? order.items.length : 0} item
-                  {Array.isArray(order.items) && order.items.length > 1 ? 's' : ''}
+                  {Array.isArray(order.items) && order.items.length > 1
+                    ? 's'
+                    : ''}
                 </span>
 
                 {deliveryMeta && (
                   <>
-                    <span className="hidden sm:inline-block text-slate-300">•</span>
+                    <span className="hidden sm:inline-block text-slate-300">
+                      •
+                    </span>
                     <span className="inline-flex items-center gap-1">
-                      {DeliveryIcon && <DeliveryIcon size={14} className="text-emerald-500" />}
+                      {DeliveryIcon && (
+                        <DeliveryIcon
+                          size={14}
+                          className="text-emerald-500"
+                        />
+                      )}
                       <span>
                         {deliveryMeta.label}{' '}
-                        <span className={`font-medium ${deliveryMeta.accent}`}>
+                        <span
+                          className={`font-medium ${deliveryMeta.accent}`}
+                        >
                           {formatDate(deliveryMeta.date)}
                         </span>
                       </span>
@@ -1149,9 +1188,14 @@ const OrderDetail = () => {
 
                 {order.carrier && (
                   <>
-                    <span className="hidden sm:inline-block text-slate-300">•</span>
+                    <span className="hidden sm:inline-block text-slate-300">
+                      •
+                    </span>
                     <span className="inline-flex items-center gap-1 text-xs sm:text-sm text-slate-500">
-                      Shipped via <span className="font-medium text-slate-800">{order.carrier}</span>
+                      Shipped via{' '}
+                      <span className="font-medium text-slate-800">
+                        {order.carrier}
+                      </span>
                     </span>
                   </>
                 )}
@@ -1160,14 +1204,20 @@ const OrderDetail = () => {
 
             <div className="flex flex-wrap items-center gap-2 md:justify-end">
               {/* Payment chip */}
-              <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium ring-1 ${paymentMeta.chipClass}`}>
+              <div
+                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium ring-1 ${paymentMeta.chipClass}`}
+              >
                 <CreditCard size={14} />
                 <span>{paymentMeta.statusLabel}</span>
               </div>
 
               {/* Status chip */}
-              <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium ring-1 ${statusMeta.badge}`}>
-                <span className={`h-2 w-2 rounded-full ${statusMeta.dot}`} />
+              <div
+                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium ring-1 ${statusMeta.badge}`}
+              >
+                <span
+                  className={`h-2 w-2 rounded-full ${statusMeta.dot}`}
+                />
                 <StatusIcon size={14} />
                 <span className="capitalize">{statusMeta.label}</span>
               </div>
@@ -1183,10 +1233,17 @@ const OrderDetail = () => {
             <div className="bg-white rounded-2xl border border-slate-200 shadow-sm">
               <div className="px-4 sm:px-6 py-4 border-b border-slate-100 flex items-center justify-between gap-3">
                 <div>
-                  <h2 className="text-base sm:text-lg font-semibold text-slate-900">Items in this order</h2>
+                  <h2 className="text-base sm:text-lg font-semibold text-slate-900">
+                    Items in this order
+                  </h2>
                   <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-                    {Array.isArray(order.items) ? order.items.length : 0} item
-                    {Array.isArray(order.items) && order.items.length > 1 ? 's' : ''} purchased
+                    {Array.isArray(order.items) ? order.items.length : 0}{' '}
+                    item
+                    {Array.isArray(order.items) &&
+                    order.items.length > 1
+                      ? 's'
+                      : ''}{' '}
+                    purchased
                   </p>
                 </div>
                 <span className="hidden sm:inline-flex items-center justify-center px-3 py-1 rounded-full text-[11px] font-medium bg-slate-50 text-slate-600 border border-slate-100">
@@ -1195,21 +1252,46 @@ const OrderDetail = () => {
               </div>
 
               <div className="divide-y divide-slate-100">
-                {(Array.isArray(order.items) ? order.items : []).map((item, index) => (
-                  <div key={index} className="px-4 sm:px-6 py-4 flex items-start gap-3 sm:gap-4">
-                    <div className="h-16 w-16 sm:h-20 sm:w-20 rounded-lg border border-slate-100 bg-slate-50 flex items-center justify-center overflow-hidden flex-shrink-0">
-                      <img src={item.image || '/placeholder.png'} alt={item.name} className="h-full w-full object-contain" />
+                {(Array.isArray(order.items) ? order.items : []).map(
+                  (item, index) => (
+                    <div
+                      key={index}
+                      className="px-4 sm:px-6 py-4 flex items-start gap-3 sm:gap-4"
+                    >
+                      <div className="h-16 w-16 sm:h-20 sm:w-20 rounded-lg border border-slate-100 bg-slate-50 flex items-center justify-center overflow-hidden flex-shrink-0">
+                        <img
+                          src={item.image || '/placeholder.png'}
+                          alt={item.name}
+                          className="h-full w-full object-contain"
+                        />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm sm:text-base font-medium text-slate-900 truncate">
+                          {item.name}
+                        </p>
+                        <p className="text-xs text-slate-500 mt-1">
+                          Qty:{' '}
+                          <span className="font-medium">
+                            {item.quantity}
+                          </span>
+                        </p>
+                        <p className="text-xs text-slate-500 mt-0.5">
+                          Price per item: ₹
+                          {(item.discountPrice || item.price).toLocaleString()}
+                        </p>
+                      </div>
+                      <div className="text-right text-sm sm:text-base">
+                        <p className="font-semibold text-slate-900">
+                          ₹
+                          {(
+                            ((item.discountPrice || item.price) *
+                              item.quantity) || 0
+                          ).toLocaleString()}
+                        </p>
+                      </div>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm sm:text-base font-medium text-slate-900 truncate">{item.name}</p>
-                      <p className="text-xs text-slate-500 mt-1">Qty: <span className="font-medium">{item.quantity}</span></p>
-                      <p className="text-xs text-slate-500 mt-0.5">Price per item: ₹{(item.discountPrice || item.price).toLocaleString()}</p>
-                    </div>
-                    <div className="text-right text-sm sm:text-base">
-                      <p className="font-semibold text-slate-900">₹{(((item.discountPrice || item.price) * item.quantity) || 0).toLocaleString()}</p>
-                    </div>
-                  </div>
-                ))}
+                  )
+                )}
               </div>
             </div>
 
@@ -1220,44 +1302,83 @@ const OrderDetail = () => {
                   <MapPin size={18} />
                 </div>
                 <div>
-                  <h2 className="text-base sm:text-lg font-semibold text-slate-900">Shipping address</h2>
-                  <p className="text-xs sm:text-sm text-slate-500 mt-0.5">Your order will be delivered here.</p>
+                  <h2 className="text-base sm:text-lg font-semibold text-slate-900">
+                    Shipping address
+                  </h2>
+                  <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+                    Your order will be delivered here.
+                  </p>
                 </div>
               </div>
               <div className="px-4 sm:px-6 py-4 text-sm text-slate-700">
-                <p className="font-semibold">{order.shippingAddress?.firstName} {order.shippingAddress?.lastName}</p>
-                <p className="mt-1">{order.shippingAddress?.addressLine1}</p>
-                {order.shippingAddress?.addressLine2 && <p>{order.shippingAddress.addressLine2}</p>}
-                <p className="mt-1">{order.shippingAddress?.city}, {order.shippingAddress?.state} - {order.shippingAddress?.zipCode}</p>
+                <p className="font-semibold">
+                  {order.shippingAddress?.firstName}{' '}
+                  {order.shippingAddress?.lastName}
+                </p>
+                <p className="mt-1">
+                  {order.shippingAddress?.addressLine1}
+                </p>
+                {order.shippingAddress?.addressLine2 && (
+                  <p>{order.shippingAddress.addressLine2}</p>
+                )}
+                <p className="mt-1">
+                  {order.shippingAddress?.city},{' '}
+                  {order.shippingAddress?.state} -{' '}
+                  {order.shippingAddress?.zipCode}
+                </p>
                 <p>{order.shippingAddress?.country}</p>
-                <p className="mt-2 text-sm text-slate-600"><span className="font-medium">Mobile:</span> {order.shippingAddress?.mobile}</p>
+                <p className="mt-2 text-sm text-slate-600">
+                  <span className="font-medium">Mobile:</span>{' '}
+                  {order.shippingAddress?.mobile}
+                </p>
               </div>
             </div>
 
             {/* Timeline */}
             <div className="bg-white rounded-2xl border border-slate-200 shadow-sm">
               <div className="px-4 sm:px-6 py-4 border-b border-slate-100">
-                <h2 className="text-base sm:text-lg font-semibold text-slate-900">Order timeline</h2>
-                <p className="text-xs sm:text-sm text-slate-500 mt-0.5">Track the progress of your order from placement to delivery.</p>
+                <h2 className="text-base sm:text-lg font-semibold text-slate-900">
+                  Order timeline
+                </h2>
+                <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+                  Track the progress of your order from placement to
+                  delivery.
+                </p>
               </div>
               <div className="px-4 sm:px-6 py-4">
                 {order.statusHistory && order.statusHistory.length > 0 ? (
                   <ol className="relative border-l border-slate-200 space-y-4">
                     {order.statusHistory.map((history, index) => {
-                      const colors = getTimelineStatusColor(history.status);
+                      const colors = getTimelineStatusColor(
+                        history.status
+                      );
                       const Meta = getStatusMeta(history.status);
                       const Icon = Meta.icon;
                       return (
                         <li key={index} className="ml-2 pl-6">
                           <span className="absolute -left-3 flex h-6 w-6 items-center justify-center rounded-full bg-white border border-slate-200">
-                            <span className={`h-2.5 w-2.5 rounded-full ${colors.dot}`} />
+                            <span
+                              className={`h-2.5 w-2.5 rounded-full ${colors.dot}`}
+                            />
                           </span>
-                          <div className={`inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-xs font-medium ${colors.iconWrapper}`}>
+                          <div
+                            className={`inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-xs font-medium ${colors.iconWrapper}`}
+                          >
                             <Icon size={14} />
-                            <span className="capitalize">{history.status}</span>
+                            <span className="capitalize">
+                              {history.status}
+                            </span>
                           </div>
-                          <p className="mt-1 text-xs text-slate-500">{formatDateTime(history.changedAt || history.date)}</p>
-                          {history.note && <p className="mt-1 text-xs sm:text-sm text-slate-700">{history.note}</p>}
+                          <p className="mt-1 text-xs text-slate-500">
+                            {formatDateTime(
+                              history.changedAt || history.date
+                            )}
+                          </p>
+                          {history.note && (
+                            <p className="mt-1 text-xs sm:text-sm text-slate-700">
+                              {history.note}
+                            </p>
+                          )}
                         </li>
                       );
                     })}
@@ -1268,8 +1389,12 @@ const OrderDetail = () => {
                       <StatusIcon size={18} />
                     </div>
                     <div>
-                      <p className="font-medium text-sm capitalize text-slate-900">{statusMeta.label}</p>
-                      <p className="text-xs text-slate-500 mt-1">{formatDateTime(order.createdAt)}</p>
+                      <p className="font-medium text-sm capitalize text-slate-900">
+                        {statusMeta.label}
+                      </p>
+                      <p className="text-xs text-slate-500 mt-1">
+                        {formatDateTime(order.createdAt)}
+                      </p>
                     </div>
                   </div>
                 )}
@@ -1282,57 +1407,164 @@ const OrderDetail = () => {
             {/* Order summary */}
             <div className="bg-white rounded-2xl border border-slate-200 shadow-sm">
               <div className="px-4 sm:px-6 py-4 border-b border-slate-100">
-                <h2 className="text-base sm:text-lg font-semibold text-slate-900">Order summary</h2>
+                <h2 className="text-base sm:text-lg font-semibold text-slate-900">
+                  Order summary
+                </h2>
               </div>
               <div className="px-4 sm:px-6 py-4 space-y-3 text-sm">
-                <div className="flex justify-between"><span className="text-slate-600">Subtotal</span><span className="font-medium text-slate-900">₹{(order.itemsPrice || 0).toLocaleString()}</span></div>
-                <div className="flex justify-between"><span className="text-slate-600">Tax</span><span className="font-medium text-slate-900">₹{(order.taxPrice || 0).toLocaleString()}</span></div>
-                <div className="flex justify-between"><span className="text-slate-600">Shipping</span><span className="font-medium">{order.shippingPrice === 0 ? <span className="text-emerald-600">FREE</span> : <span className="text-slate-900">₹{(order.shippingPrice || 0).toLocaleString()}</span>}</span></div>
-                <div className="border-t border-slate-200 pt-3 flex justify-between items-center"><span className="font-semibold text-sm text-slate-900">Total amount</span><span className="text-lg sm:text-xl font-semibold text-emerald-700">₹{(order.totalPrice || 0).toLocaleString()}</span></div>
+                <div className="flex justify-between">
+                  <span className="text-slate-600">Subtotal</span>
+                  <span className="font-medium text-slate-900">
+                    ₹{(order.itemsPrice || 0).toLocaleString()}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-600">Tax</span>
+                  <span className="font-medium text-slate-900">
+                    ₹{(order.taxPrice || 0).toLocaleString()}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-600">Shipping</span>
+                  <span className="font-medium">
+                    {order.shippingPrice === 0 ? (
+                      <span className="text-emerald-600">FREE</span>
+                    ) : (
+                      <span className="text-slate-900">
+                        ₹
+                        {(
+                          order.shippingPrice || 0
+                        ).toLocaleString()}
+                      </span>
+                    )}
+                  </span>
+                </div>
+                <div className="border-t border-slate-200 pt-3 flex justify-between items-center">
+                  <span className="font-semibold text-sm text-slate-900">
+                    Total amount
+                  </span>
+                  <span className="text-lg sm:text-xl font-semibold text-emerald-700">
+                    ₹{(order.totalPrice || 0).toLocaleString()}
+                  </span>
+                </div>
               </div>
             </div>
 
             {/* Payment info */}
             <div className="bg-white rounded-2xl border border-slate-200 shadow-sm">
               <div className="px-4 sm:px-6 py-4 border-b border-slate-100 flex items-center gap-2">
-                <div className="h-8 w-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-700"><CreditCard size={18} /></div>
+                <div className="h-8 w-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-700">
+                  <CreditCard size={18} />
+                </div>
                 <div>
-                  <h2 className="text-base sm:text-lg font-semibold text-slate-900">Payment information</h2>
-                  <p className="text-xs sm:text-sm text-slate-500 mt-0.5">Details about how this order was paid.</p>
+                  <h2 className="text-base sm:text-lg font-semibold text-slate-900">
+                    Payment information
+                  </h2>
+                  <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+                    Details about how this order was paid.
+                  </p>
                 </div>
               </div>
               <div className="px-4 sm:px-6 py-4 text-sm space-y-2">
-                <div className="flex justify-between"><span className="text-slate-600">Method</span><span className="font-medium text-slate-900">{order.paymentInfo?.method === 'cod' ? 'Cash on Delivery' : 'Online Payment'}</span></div>
+                {/* Method + mode line */}
+                <div className="flex justify-between">
+                  <span className="text-slate-600">Method</span>
+                  <span className="font-medium text-slate-900 text-right">
+                    {paymentMeta.methodLabel}
+                    {paymentMeta.modeLabel && (
+                      <span className="ml-1 text-xs text-slate-500">
+                        • {paymentMeta.modeLabel}
+                      </span>
+                    )}
+                  </span>
+                </div>
 
+                {/* Status chip */}
                 <div className="flex justify-between items-center">
                   <span className="text-slate-600">Status</span>
-                  <span className={`px-2.5 py-1 rounded-full text-[11px] font-medium ${order.paymentInfo?.status === 'completed' ? 'bg-emerald-50 text-emerald-700' : order.paymentInfo?.status === 'failed' ? 'bg-rose-50 text-rose-700' : 'bg-amber-50 text-amber-700'}`}>
-                    {order.paymentInfo?.status === 'pending' && order.paymentInfo?.method === 'cod' ? 'Pay on Delivery' : order.paymentInfo?.status || 'N/A'}
+                  <span
+                    className={`px-2.5 py-1 rounded-full text-[11px] font-medium ${
+                      order.paymentInfo?.status === 'completed'
+                        ? 'bg-emerald-50 text-emerald-700'
+                        : order.paymentInfo?.status === 'failed'
+                        ? 'bg-rose-50 text-rose-700'
+                        : 'bg-amber-50 text-amber-700'
+                    }`}
+                  >
+                    {order.paymentInfo?.status === 'pending' &&
+                    order.paymentInfo?.method === 'cod'
+                      ? 'Pay on Delivery'
+                      : order.paymentInfo?.status || 'N/A'}
                   </span>
                 </div>
 
                 {/* Cashfree fields */}
-                {order.paymentInfo?.cashfreeOrderId && <div className="flex justify-between text-xs text-slate-600"><span>Cashfree Link ID</span><span className="font-mono">{order.paymentInfo.cashfreeOrderId}</span></div>}
-                {order.paymentInfo?.cashfreeReferenceId && <div className="flex justify-between text-xs text-slate-600"><span>Transaction ID</span><span className="font-mono">{order.paymentInfo.cashfreeReferenceId}</span></div>}
-                {order.paymentInfo?.cashfreePaymentMode && <div className="flex justify-between text-xs text-slate-600"><span>Payment Mode</span><span className="font-mono">{order.paymentInfo.cashfreePaymentMode}</span></div>}
-
-                {/* Subtle verifying indicator */}
-                {order.paymentInfo?.method === 'cashfree' && order.paymentInfo?.status === 'pending' && verifying && (
-                  <div className="mt-3 text-xs text-slate-600 inline-flex items-center gap-2">
-                    <RefreshCw size={14} className="animate-spin" />
-                    Checking payment status...
+                {order.paymentInfo?.cashfreeOrderId && (
+                  <div className="flex justify-between text-xs text-slate-600">
+                    <span>Cashfree Link ID</span>
+                    <span className="font-mono">
+                      {order.paymentInfo.cashfreeOrderId}
+                    </span>
                   </div>
                 )}
 
-                {order.paymentInfo?.method === 'cod' && order.paymentInfo?.status === 'pending' && (
-                  <div className="mt-3 px-3 py-3 rounded-lg bg-amber-50 border border-amber-100 text-xs text-amber-800">
-                    Please keep <span className="font-semibold">₹{(order.totalPrice || 0).toLocaleString()}</span> ready in cash at the time of delivery.
+                {order.paymentInfo?.cashfreeReferenceId && (
+                  <div className="flex justify-between text-xs text-slate-600">
+                    <span>Transaction ID</span>
+                    <span className="font-mono">
+                      {order.paymentInfo.cashfreeReferenceId}
+                    </span>
                   </div>
                 )}
+
+                {/* Friendly payment mode + raw code */}
+                {paymentMeta.modeLabel && (
+                  <div className="flex justify-between text-xs text-slate-600">
+                    <span>Payment Mode</span>
+                    <span className="text-right">
+                      <span className="font-medium">
+                        {paymentMeta.modeLabel}
+                      </span>
+                      {order.paymentInfo?.cashfreePaymentMode && (
+                        <span className="ml-1 font-mono text-[11px] text-slate-400">
+                          (
+                          {order.paymentInfo.cashfreePaymentMode.toUpperCase()}
+                          )
+                        </span>
+                      )}
+                    </span>
+                  </div>
+                )}
+
+                {order.paymentInfo?.method === 'cashfree' &&
+                  order.paymentInfo?.status === 'pending' &&
+                  verifying && (
+                    <div className="mt-3 text-xs text-slate-600 inline-flex items-center gap-2">
+                      <RefreshCw size={14} className="animate-spin" />
+                      Checking payment status...
+                    </div>
+                  )}
+
+                {order.paymentInfo?.method === 'cod' &&
+                  order.paymentInfo?.status === 'pending' && (
+                    <div className="mt-3 px-3 py-3 rounded-lg bg-amber-50 border border-amber-100 text-xs text-amber-800">
+                      Please keep{' '}
+                      <span className="font-semibold">
+                        ₹{(order.totalPrice || 0).toLocaleString()}
+                      </span>{' '}
+                      ready in cash at the time of delivery.
+                    </div>
+                  )}
 
                 {order.paymentInfo?.paidAt && (
                   <div className="mt-2 text-xs text-slate-500">
-                    {order.paymentInfo.method === 'cod' ? `Cash collected on ${formatDate(order.paymentInfo.paidAt)}` : `Paid on ${formatDate(order.paymentInfo.paidAt)}`}
+                    {order.paymentInfo.method === 'cod'
+                      ? `Cash collected on ${formatDate(
+                          order.paymentInfo.paidAt
+                        )}`
+                      : `Paid on ${formatDate(
+                          order.paymentInfo.paidAt
+                        )}`}
                   </div>
                 )}
               </div>
@@ -1341,30 +1573,72 @@ const OrderDetail = () => {
             {/* Delivery & tracking */}
             <div className="bg-white rounded-2xl border border-slate-200 shadow-sm">
               <div className="px-4 sm:px-6 py-4 border-b border-slate-100 flex items-center gap-2">
-                <div className="h-8 w-8 rounded-full bg-sky-50 flex items-center justify-center text-sky-600"><Truck size={18} /></div>
+                <div className="h-8 w-8 rounded-full bg-sky-50 flex items-center justify-center text-sky-600">
+                  <Truck size={18} />
+                </div>
                 <div>
-                  <h2 className="text-base sm:text-lg font-semibold text-slate-900">Delivery & tracking</h2>
-                  <p className="text-xs sm:text-sm text-slate-500 mt-0.5">Track where your package is in the journey.</p>
+                  <h2 className="text-base sm:text-lg font-semibold text-slate-900">
+                    Delivery & tracking
+                  </h2>
+                  <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+                    Track where your package is in the journey.
+                  </p>
                 </div>
               </div>
               <div className="px-4 sm:px-6 py-4 text-sm space-y-3">
-                <div className="flex justify-between"><span className="text-slate-600">Courier</span><span className="font-medium text-slate-900">{order.carrier || 'Not assigned yet'}</span></div>
-                <div className="flex justify-between"><span className="text-slate-600">Tracking ID</span><span className="font-mono text-xs sm:text-sm text-slate-900">{order.trackingId || 'Not assigned yet'}</span></div>
+                <div className="flex justify-between">
+                  <span className="text-slate-600">Courier</span>
+                  <span className="font-medium text-slate-900">
+                    {order.carrier || 'Not assigned yet'}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-600">Tracking ID</span>
+                  <span className="font-mono text-xs sm:text-sm text-slate-900">
+                    {order.trackingId || 'Not assigned yet'}
+                  </span>
+                </div>
                 {order.trackingUrl ? (
-                  <a href={order.trackingUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center mt-2 w-full px-4 py-2 rounded-lg bg-sky-50 text-sky-700 text-sm font-medium hover:bg-sky-100 transition-colors">View live tracking</a>
+                  <a
+                    href={order.trackingUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center justify-center mt-2 w-full px-4 py-2 rounded-lg bg-sky-50 text-sky-700 text-sm font-medium hover:bg-sky-100 transition-colors"
+                  >
+                    View live tracking
+                  </a>
                 ) : (
-                  <p className="mt-2 text-xs text-slate-500">Once your order is handed over to a courier partner, tracking details will appear here.</p>
+                  <p className="mt-2 text-xs text-slate-500">
+                    Once your order is handed over to a courier partner,
+                    tracking details will appear here.
+                  </p>
                 )}
               </div>
             </div>
 
             {/* Help */}
             <div className="bg-slate-900 rounded-2xl shadow-sm text-slate-50 p-5 sm:p-6">
-              <h3 className="text-base sm:text-lg font-semibold mb-2">Need help with this order?</h3>
-              <p className="text-xs sm:text-sm text-slate-300 mb-4">If you have any questions about delivery, payment, or items in this order, our support team is ready to assist you.</p>
+              <h3 className="text-base sm:text-lg font-semibold mb-2">
+                Need help with this order?
+              </h3>
+              <p className="text-xs sm:text-sm text-slate-300 mb-4">
+                If you have any questions about delivery, payment, or
+                items in this order, our support team is ready to assist
+                you.
+              </p>
               <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
-                <Link to="/contact" className="inline-flex items-center justify-center w-full px-4 py-2.5 rounded-lg bg-white text-slate-900 text-sm font-medium hover:bg-slate-100 transition-colors">Contact support</Link>
-                <a href="tel:18001234567" className="inline-flex items-center justify-center w-full px-4 py-2.5 rounded-lg border border-slate-600 text-sm font-medium text-slate-100 hover:bg-slate-800 transition-colors">Call: 1800-123-4567</a>
+                <Link
+                  to="/contact"
+                  className="inline-flex items-center justify-center w-full px-4 py-2.5 rounded-lg bg-white text-slate-900 text-sm font-medium hover:bg-slate-100 transition-colors"
+                >
+                  Contact support
+                </Link>
+                <a
+                  href="tel:18001234567"
+                  className="inline-flex items-center justify-center w-full px-4 py-2.5 rounded-lg border border-slate-600 text-sm font-medium text-slate-100 hover:bg-slate-800 transition-colors"
+                >
+                  Call: 1800-123-4567
+                </a>
               </div>
             </div>
           </div>
@@ -1375,7 +1649,3 @@ const OrderDetail = () => {
 };
 
 export default OrderDetail;
-
-
-
-
