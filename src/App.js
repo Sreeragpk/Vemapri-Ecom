@@ -217,6 +217,9 @@ import AdminOrders from './pages/admin/AdminOrders';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import ContactUs from './pages/ContactUs';
 import NotFound from './pages/NotFound';
+import FAQ from './pages/Faq';
+import DeliveryInfo from './pages/DeliveryInfo';
+import TermsOfService from './pages/TermsofService';
 
 // Protected Route
 const ProtectedRoute = ({ children, adminOnly = false }) => {
@@ -266,6 +269,9 @@ function App() {
             <Route path="/register" element={<PublicLayout><Register /></PublicLayout>} />
             <Route path="/privacy" element={<PublicLayout><PrivacyPolicy /></PublicLayout>} />
             <Route path="/contact" element={<PublicLayout><ContactUs /></PublicLayout>} />
+            <Route path="/faq" element={<PublicLayout><FAQ /></PublicLayout>} />
+            <Route path="/shipping" element={<PublicLayout><DeliveryInfo /></PublicLayout>} />
+             <Route path="/terms" element={<PublicLayout><TermsOfService /></PublicLayout>} />
 
             {/* ========== Customer Protected Routes ========== */}
             <Route

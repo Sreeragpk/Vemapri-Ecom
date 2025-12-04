@@ -2,42 +2,235 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
+    <link rel="icon" href="%PUBLIC_URL%/vemapriicon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#000000" />
+    <meta name="theme-color" content="#0f172a" />
+    
+    <!-- Primary Meta Tags -->
+    <title>Vemapri - Premium Groceries & Staples Delivery | Bengaluru</title>
+    <meta
+      name="title"
+      content="Vemapri - Premium Groceries & Staples Delivery | Bengaluru"
+    />
     <meta
       name="description"
-      content="Web site created using create-react-app"
+      content="Shop premium quality groceries, organic products, pulses, grains, spices, and staples online at Vemapri. Fast delivery in Bengaluru. Best prices on authentic Indian groceries."
     />
-    <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
-    <!--
-      manifest.json provides metadata used when your web app is installed on a
-      user's mobile device or desktop. See https://developers.google.com/web/fundamentals/web-app-manifest/
-    -->
-    <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
-    <!--
-      Notice the use of %PUBLIC_URL% in the tags above.
-      It will be replaced with the URL of the `public` folder during the build.
-      Only files inside the `public` folder can be referenced from the HTML.
+    <meta
+      name="keywords"
+      content="groceries online, organic food, pulses, grains, spices, staples, grocery delivery Bengaluru, online grocery shopping, vemapri, chilly powder, chia seeds, bengal gram, dry ginger"
+    />
+    <meta name="author" content="Vemapri" />
+    <meta name="robots" content="index, follow" />
 
-      Unlike "/favicon.ico" or "favicon.ico", "%PUBLIC_URL%/favicon.ico" will
-      work correctly both with client-side routing and a non-root public URL.
-      Learn how to configure a non-root public URL by running `npm run build`.
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://www.vemapri.com/" />
+    <meta
+      property="og:title"
+      content="Vemapri - Premium Groceries & Staples Delivery | Bengaluru"
+    />
+    <meta
+      property="og:description"
+      content="Shop premium quality groceries, organic products, pulses, grains, spices, and staples online at Vemapri. Fast delivery in Bengaluru."
+    />
+    <meta
+      property="og:image"
+      content="%PUBLIC_URL%/og-image.jpg"
+    />
+    <meta property="og:site_name" content="Vemapri" />
+    <meta property="og:locale" content="en_IN" />
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:url" content="https://www.vemapri.com/" />
+    <meta
+      property="twitter:title"
+      content="Vemapri - Premium Groceries & Staples Delivery | Bengaluru"
+    />
+    <meta
+      property="twitter:description"
+      content="Shop premium quality groceries, organic products, pulses, grains, spices, and staples online at Vemapri. Fast delivery in Bengaluru."
+    />
+    <meta
+      property="twitter:image"
+      content="%PUBLIC_URL%/twitter-image.jpg"
+    />
+
+    <!-- Canonical URL -->
+    <link rel="canonical" href="https://www.vemapri.com/" />
+
+    <!-- Apple Touch Icons -->
+    <link rel="apple-touch-icon" sizes="180x180" href="%PUBLIC_URL%/apple-touch-icon.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="%PUBLIC_URL%/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="%PUBLIC_URL%/favicon-16x16.png" />
+
+    <!-- Manifest -->
+    <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
+
+    <!-- Structured Data (JSON-LD) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "Vemapri",
+      "url": "https://www.vemapri.com",
+      "logo": "https://www.vemapri.com/logo.png",
+      "description": "Premium groceries and staples delivery service in Bengaluru",
+      "address": {
+        "@type": "PostalAddress",
+        "streetAddress": "Electronic City",
+        "addressLocality": "Bengaluru",
+        "addressRegion": "Karnataka",
+        "addressCountry": "IN"
+      },
+      "contactPoint": {
+        "@type": "ContactPoint",
+        "telephone": "+91-77026-59401",
+        "contactType": "Customer Service",
+        "email": "support@vemapri.com",
+        "availableLanguage": ["English", "Hindi", "Kannada"]
+      },
+      "sameAs": [
+        "https://www.facebook.com/vemapri",
+        "https://www.instagram.com/vemapri",
+        "https://www.twitter.com/vemapri"
+      ]
+    }
+    </script>
+
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "Vemapri",
+      "url": "https://www.vemapri.com",
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": "https://www.vemapri.com/products?search={search_term_string}",
+        "query-input": "required name=search_term_string"
+      }
+    }
+    </script>
+
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Store",
+      "name": "Vemapri",
+      "image": "https://www.vemapri.com/logo.png",
+      "telephone": "+91-77026-59401",
+      "email": "support@vemapri.com",
+      "address": {
+        "@type": "PostalAddress",
+        "streetAddress": "Electronic City",
+        "addressLocality": "Bengaluru",
+        "addressRegion": "Karnataka",
+        "postalCode": "560100",
+        "addressCountry": "IN"
+      },
+      "priceRange": "₹₹",
+      "openingHoursSpecification": [
+        {
+          "@type": "OpeningHoursSpecification",
+          "dayOfWeek": [
+            "Monday",
+            "Tuesday",
+            "Wednesday",
+            "Thursday",
+            "Friday"
+          ],
+          "opens": "09:00",
+          "closes": "19:00"
+        },
+        {
+          "@type": "OpeningHoursSpecification",
+          "dayOfWeek": "Saturday",
+          "opens": "10:00",
+          "closes": "17:00"
+        }
+      ]
+    }
+    </script>
+
+    <!-- Preconnect to external domains -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
+    <!-- Google Fonts - Optional (if you want to add custom fonts) -->
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- DNS Prefetch -->
+    <link rel="dns-prefetch" href="https://api.vemapri.com" />
+
+    <!-- Security Headers -->
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests" />
+
+    <!-- Mobile Web App Capable -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Vemapri" />
+
+    <!-- Microsoft Tiles -->
+    <meta name="msapplication-TileColor" content="#0f172a" />
+    <meta name="msapplication-TileImage" content="%PUBLIC_URL%/ms-icon-144x144.png" />
+    <meta name="msapplication-config" content="%PUBLIC_URL%/browserconfig.xml" />
+
+    <!-- Performance optimization -->
+    <link rel="preload" as="style" href="%PUBLIC_URL%/static/css/main.css" />
+
+    <!-- Global site tag (gtag.js) - Google Analytics -->
+    <!-- Uncomment and add your GA tracking ID when ready -->
+    <!--
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-XXXXXXXXXX');
+    </script>
     -->
-    <title>React App</title>
+
+    <!-- Facebook Pixel Code -->
+    <!-- Uncomment and add your Pixel ID when ready -->
+    <!--
+    <script>
+      !function(f,b,e,v,n,t,s)
+      {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+      n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+      if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+      n.queue=[];t=b.createElement(e);t.async=!0;
+      t.src=v;s=b.getElementsByTagName(e)[0];
+      s.parentNode.insertBefore(t,s)}(window, document,'script',
+      'https://connect.facebook.net/en_US/fbevents.js');
+      fbq('init', 'YOUR_PIXEL_ID');
+      fbq('track', 'PageView');
+    </script>
+    <noscript>
+      <img height="1" width="1" style="display:none"
+      src="https://www.facebook.com/tr?id=YOUR_PIXEL_ID&ev=PageView&noscript=1"/>
+    </noscript>
+    -->
   </head>
   <body>
-    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <noscript>
+      <div style="padding: 20px; text-align: center; font-family: Arial, sans-serif;">
+        <h1>JavaScript Required</h1>
+        <p>You need to enable JavaScript to run this application.</p>
+        <p>Vemapri - Premium Groceries & Staples Delivery</p>
+        <p>Please enable JavaScript in your browser settings and refresh the page.</p>
+      </div>
+    </noscript>
     <div id="root"></div>
-    <!--
+
+    <!-- 
       This HTML file is a template.
-      If you open it directly in the browser, you will see an empty page.
-
-      You can add webfonts, meta tags, or analytics to this file.
       The build step will place the bundled scripts into the <body> tag.
-
-      To begin the development, run `npm start` or `yarn start`.
-      To create a production bundle, use `npm run build` or `yarn build`.
     -->
   </body>
 </html>
