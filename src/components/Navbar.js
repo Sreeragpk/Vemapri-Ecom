@@ -18,7 +18,7 @@ import {
   Minus,
 } from 'lucide-react';
 import api from '../utils/api';
-import logo from '../assets/logo.webp';
+import logo from '../assets/vemapriicon.png';
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -126,6 +126,43 @@ const Navbar = () => {
 
   const subtotal = getCartTotal();
 
+  const LogoBlock = ({ small = false }) => (
+    <Link
+      to="/"
+      className="flex items-center gap-3 flex-shrink-0"
+      onClick={closeAllMenus}
+    >
+      <div className="h-10 w-10 sm:h-11 sm:w-11 rounded-xl bg-white border border-slate-200 flex items-center justify-center shadow-sm overflow-hidden">
+        <img
+          src={logo}
+          alt="Vemapri Logo"
+          className="h-full w-full object-contain"
+          width={67}
+          height={36}
+          loading="lazy"
+          decoding="async"
+          onError={(e) => {
+            e.target.style.display = 'none';
+            e.target.nextSibling.style.display = 'flex';
+          }}
+        />
+        <span className="hidden text-lg font-semibold text-slate-900 items-center justify-center">
+          V
+        </span>
+      </div>
+      {!small && (
+        <div className="hidden sm:flex flex-col leading-tight">
+          <span className="text-lg lg:text-xl font-semibold tracking-tight text-slate-900">
+            Vemapri
+          </span>
+          <span className="text-[10px] lg:text-[11px] uppercase tracking-[0.18em] text-slate-500">
+            {/* Grocery &amp; Food Supplies */}Gudipati Products
+          </span>
+        </div>
+      )}
+    </Link>
+  );
+
   return (
     <>
       <nav
@@ -135,43 +172,58 @@ const Navbar = () => {
             : 'bg-white/95 backdrop-blur'
         }`}
       >
-        {/* Main Navigation */}
         <div className="max-w-[105rem] mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex h-16 items-center justify-between gap-4">
+          {/* MOBILE ROW: menu left, logo center, icons right */}
+          <div className="flex h-16 items-center justify-between lg:hidden">
+            {/* Left: mobile menu button */}
+            <button
+              onClick={() => setIsMenuOpen((prev) => !prev)}
+              className="flex items-center justify-center h-10 w-10 rounded-full border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-all"
+              aria-label="Toggle menu"
+            >
+              {isMenuOpen ? <X size={20} /> : <Menu size={20} />}
+            </button>
+
+            {/* Center: logo */}
+            <LogoBlock small />
+
+            {/* Right: account + cart */}
+            <div className="flex items-center gap-2">
+              {user && (
+                <button
+                  onClick={() => {
+                    closeAllMenus();
+                    navigate('/profile');
+                  }}
+                  className="flex items-center justify-center h-9 w-9 rounded-full bg-slate-900 text-white text-xs font-semibold"
+                  aria-label="Account"
+                >
+                  {user.firstName?.[0]?.toUpperCase() || 'U'}
+                </button>
+              )}
+              <button
+                onClick={() => setIsCartOpen(true)}
+                className="relative flex items-center justify-center h-9 w-9 rounded-full border border-slate-900 bg-slate-900 text-slate-50 hover:bg-black hover:border-black transition-all"
+                aria-label="Open cart"
+              >
+                <ShoppingCart size={18} />
+                {cartCount > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 flex h-4 min-w-[16px] px-0.5 items-center justify-center rounded-full bg-amber-500 text-[9px] font-semibold text-white">
+                    {cartCount}
+                  </span>
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* DESKTOP ROW */}
+          <div className="hidden lg:flex h-16 items-center justify-between gap-4">
             {/* Left: Logo + Links */}
             <div className="flex items-center gap-6 lg:gap-8">
-              {/* Logo */}
-              <Link
-                to="/"
-                className="flex items-center gap-3 flex-shrink-0"
-                onClick={closeAllMenus}
-              >
-                <div className="h-10 w-10 sm:h-11 sm:w-11 rounded-xl bg-white border border-slate-200 flex items-center justify-center shadow-sm overflow-hidden">
-                  <img
-                    src={logo}
-                    alt="Vemapri Logo"
-                    className="h-full w-full object-contain"
-                    onError={(e) => {
-                      e.target.style.display = 'none';
-                      e.target.nextSibling.style.display = 'flex';
-                    }}
-                  />
-                  <span className="hidden text-lg font-semibold text-slate-900 items-center justify-center">
-                    V
-                  </span>
-                </div>
-                <div className="hidden sm:flex flex-col leading-tight">
-                  <span className="text-lg lg:text-xl font-semibold tracking-tight text-slate-900">
-                    Vemapri
-                  </span>
-                  <span className="text-[10px] lg:text-[11px] uppercase tracking-[0.18em] text-slate-500">
-                    Grocery &amp; Food Supplies
-                  </span>
-                </div>
-              </Link>
+              <LogoBlock />
 
               {/* Desktop Navigation Links */}
-              <div className="hidden lg:flex items-center gap-1">
+              <div className="flex items-center gap-1">
                 <Link
                   to="/products"
                   onClick={closeAllMenus}
@@ -242,8 +294,8 @@ const Navbar = () => {
               </div>
             </div>
 
-            {/* Right: Search, Notifications, User, Cart (last) */}
-            <div className="flex items-center gap-2 sm:gap-3">
+            {/* Right: Search, Notifications, User, Cart */}
+            <div className="flex items-center gap-3">
               {/* Search - Desktop */}
               <button className="hidden xl:flex items-center gap-2 px-3 py-2 rounded-full bg-slate-50 border border-slate-200 text-slate-600 hover:bg-white hover:border-slate-300 transition-all">
                 <Search size={18} className="text-slate-400" />
@@ -335,7 +387,7 @@ const Navbar = () => {
                 </div>
               )}
 
-              {/* User Menu */}
+              {/* User Menu (desktop) */}
               {user ? (
                 <div className="relative" ref={userMenuRef}>
                   <button
@@ -346,9 +398,7 @@ const Navbar = () => {
                       {user.firstName?.[0]?.toUpperCase() || 'U'}
                     </div>
                     <div className="hidden lg:flex flex-col items-start leading-tight">
-                      <span className="text-[10px] text-slate-500">
-                        Hello,
-                      </span>
+                      <span className="text-[10px] text-slate-500">Hello,</span>
                       <span className="text-sm font-medium text-slate-900 max-w-[110px] truncate">
                         {user.firstName}
                       </span>
@@ -433,7 +483,7 @@ const Navbar = () => {
                   )}
                 </div>
               ) : (
-                <div className="hidden md:flex items-center gap-2">
+                <div className="flex items-center gap-2">
                   <Link
                     to="/login"
                     onClick={closeAllMenus}
@@ -451,40 +501,29 @@ const Navbar = () => {
                 </div>
               )}
 
-              {/* Cart trigger (last in navbar, before mobile menu) */}
+              {/* Cart trigger (desktop) */}
               <button
                 onClick={() => setIsCartOpen(true)}
-                className="relative flex items-center gap-2 h-10 px-3 sm:px-4 rounded-full border border-slate-900 bg-slate-900 text-slate-50 hover:bg-black hover:border-black transition-all"
+                className="relative hidden lg:flex items-center gap-2 h-10 px-4 rounded-full border border-slate-900 bg-slate-900 text-slate-50 hover:bg-black hover:border-black transition-all"
                 aria-label="Open cart"
               >
                 <ShoppingCart size={18} />
-                <span className="hidden sm:inline text-sm font-medium">
-                  Cart
-                </span>
+                <span className="text-sm font-medium">Cart</span>
                 {cartCount > 0 && (
                   <span className="absolute -top-2 -right-2 flex h-5 min-w-[20px] px-1 items-center justify-center rounded-full bg-amber-500 text-[10px] font-semibold text-white">
                     {cartCount}
                   </span>
                 )}
               </button>
-
-              {/* Mobile Menu Button */}
-              <button
-                onClick={() => setIsMenuOpen((prev) => !prev)}
-                className="lg:hidden flex items-center justify-center h-10 w-10 rounded-md border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-all"
-                aria-label="Toggle menu"
-              >
-                {isMenuOpen ? <X size={20} /> : <Menu size={20} />}
-              </button>
             </div>
           </div>
         </div>
       </nav>
 
-      {/* Mobile Menu */}
+      {/* Mobile Menu - fixed under navbar and scrollable */}
       {isMenuOpen && (
-        <div className="lg:hidden border-b border-slate-200 bg-white shadow-sm z-30 relative">
-          <div className="max-w-7xl mx-auto px-4 py-4 space-y-1">
+        <div className="lg:hidden fixed inset-x-0 top-16 bottom-0 z-30 border-t border-slate-200 bg-white shadow-lg">
+          <div className="max-w-[105rem] mx-auto px-4 pt-4 pb-8 space-y-1 overflow-y-auto">
             {/* Search - Mobile */}
             <div className="mb-3">
               <button className="flex items-center gap-3 w-full px-3 py-2 rounded-full bg-slate-50 border border-slate-200 text-slate-600">
@@ -527,8 +566,62 @@ const Navbar = () => {
               About
             </Link>
 
-            {!user && (
-              <div className="pt-4 mt-3 border-t border-slate-200 space-y-2">
+            {/* Auth / user section in mobile menu */}
+            {user ? (
+              <div className="pt-4 mt-3 border-t border-slate-200 space-y-2 mb-4">
+                <div className="flex items-center gap-3 px-3">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-900 text-white text-xs font-semibold">
+                    {user.firstName?.[0]?.toUpperCase() || 'U'}
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-sm font-medium text-slate-900">
+                      {user.firstName} {user.lastName}
+                    </span>
+                    <span className="text-xs text-slate-500">
+                      {user.email}
+                    </span>
+                  </div>
+                </div>
+
+                {user.role === 'admin' && (
+                  <Link
+                    to="/admin"
+                    onClick={closeAllMenus}
+                    className="flex items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 rounded-md"
+                  >
+                    <Settings size={16} className="text-slate-500" />
+                    Admin Panel
+                  </Link>
+                )}
+
+                <Link
+                  to="/profile"
+                  onClick={closeAllMenus}
+                  className="flex items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 rounded-md"
+                >
+                  <User size={16} className="text-slate-500" />
+                  My Profile
+                </Link>
+
+                <Link
+                  to="/orders"
+                  onClick={closeAllMenus}
+                  className="flex items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 rounded-md"
+                >
+                  <Package size={16} className="text-slate-500" />
+                  My Orders
+                </Link>
+
+                <button
+                  onClick={handleLogout}
+                  className="flex items-center gap-2 w-full px-3 py-2 text-sm font-medium text-rose-600 hover:bg-rose-50 rounded-md"
+                >
+                  <LogOut size={16} />
+                  Logout
+                </button>
+              </div>
+            ) : (
+              <div className="pt-4 mt-3 border-t border-slate-200 space-y-2 mb-4">
                 <Link
                   to="/login"
                   onClick={closeAllMenus}
