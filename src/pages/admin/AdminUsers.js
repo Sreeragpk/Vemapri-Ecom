@@ -117,7 +117,7 @@ const AdminUsers = () => {
           </div>
 
           <div className="flex items-center gap-3">
-            <span className="inline-flex items-center rounded-full bg-primary-50 px-4 py-1 text-xs font-medium text-primary-700 border border-primary-100">
+            <span className="inline-flex items-center rounded-full bg-primary-50 px-3 sm:px-4 py-1 text-xs font-medium text-primary-700 border border-primary-100">
               <span className="w-2 h-2 rounded-full bg-primary-500 mr-2" />
               {pagination.totalUsers} total users
             </span>
@@ -163,7 +163,7 @@ const AdminUsers = () => {
 
         {/* Filters */}
         <div className="card border border-gray-100 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
             <h2 className="text-sm font-semibold text-gray-700">Filters</h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -173,7 +173,10 @@ const AdminUsers = () => {
                 Search
               </label>
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+                <Search
+                  className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                  size={18}
+                />
                 <input
                   type="text"
                   placeholder="Search by name, email, or mobile..."
@@ -181,10 +184,10 @@ const AdminUsers = () => {
                   onChange={(e) =>
                     setFilters((prev) => ({
                       ...prev,
-                      search: e.target.value,
+                      search: e.target.value
                     }))
                   }
-                  className="input pl-10 text-sm"
+                  className="input pl-10 text-sm w-full"
                 />
               </div>
             </div>
@@ -199,10 +202,10 @@ const AdminUsers = () => {
                 onChange={(e) =>
                   setFilters((prev) => ({
                     ...prev,
-                    status: e.target.value,
+                    status: e.target.value
                   }))
                 }
-                className="input text-sm"
+                className="input text-sm w-full"
               >
                 <option value="">All Status</option>
                 <option value="active">Active</option>
@@ -220,10 +223,10 @@ const AdminUsers = () => {
                 onChange={(e) =>
                   setFilters((prev) => ({
                     ...prev,
-                    role: e.target.value,
+                    role: e.target.value
                   }))
                 }
-                className="input text-sm"
+                className="input text-sm w-full"
               >
                 <option value="">All Roles</option>
                 <option value="customer">Customer</option>
@@ -234,207 +237,371 @@ const AdminUsers = () => {
           </div>
         </div>
 
-        {/* Users Table */}
+        {/* Users List */}
         <div className="card overflow-hidden border border-gray-100 shadow-sm">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200 text-sm">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-[11px] font-semibold text-gray-500 tracking-wider uppercase">
-                    User
-                  </th>
-                  <th className="px-6 py-3 text-left text-[11px] font-semibold text-gray-500 tracking-wider uppercase">
-                    Contact
-                  </th>
-                  <th className="px-6 py-3 text-left text-[11px] font-semibold text-gray-500 tracking-wider uppercase">
-                    Role
-                  </th>
-                  <th className="px-6 py-3 text-left text-[11px] font-semibold text-gray-500 tracking-wider uppercase">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-left text-[11px] font-semibold text-gray-500 tracking-wider uppercase">
-                    Joined
-                  </th>
-                  <th className="px-6 py-3 text-right text-[11px] font-semibold text-gray-500 tracking-wider uppercase">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-100">
-                {loading ? (
-                  // Loading skeleton
-                  [...Array(5)].map((_, idx) => (
-                    <tr key={idx} className="animate-pulse">
-                      <td className="px-6 py-4">
-                        <div className="flex items-center space-x-3">
-                          <div className="h-10 w-10 rounded-full bg-gray-100" />
-                          <div className="space-y-2">
-                            <div className="h-3 w-32 bg-gray-100 rounded" />
-                            <div className="h-3 w-20 bg-gray-100 rounded" />
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="h-3 w-32 bg-gray-100 rounded mb-2" />
-                        <div className="h-3 w-24 bg-gray-100 rounded" />
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="h-4 w-16 bg-gray-100 rounded-full" />
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="h-4 w-16 bg-gray-100 rounded-full" />
-                      </td>
-                      <td className="px-6 py-4">
+          {/* MOBILE / SMALL: CARD LIST */}
+          <div className="block md:hidden">
+            {loading ? (
+              <div className="divide-y divide-gray-100">
+                {[...Array(5)].map((_, idx) => (
+                  <div key={idx} className="px-4 py-4 animate-pulse space-y-3">
+                    <div className="flex items-center space-x-3">
+                      <div className="h-10 w-10 rounded-full bg-gray-100" />
+                      <div className="flex-1 space-y-2">
+                        <div className="h-3 w-32 bg-gray-100 rounded" />
                         <div className="h-3 w-20 bg-gray-100 rounded" />
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <div className="h-3 w-16 bg-gray-100 rounded ml-auto" />
-                      </td>
-                    </tr>
-                  ))
-                ) : users.length === 0 ? (
-                  <tr>
-                    <td colSpan="6" className="px-6 py-10 text-center">
-                      <div className="flex flex-col items-center justify-center space-y-3">
-                        <div className="rounded-full bg-gray-100 w-12 h-12 flex items-center justify-center">
-                          <Users className="w-5 h-5 text-gray-400" />
-                        </div>
-                        <p className="text-sm font-medium text-gray-700">
-                          No users found
-                        </p>
-                        <p className="text-xs text-gray-500 max-w-sm">
-                          Try adjusting your filters or search term to find
-                          specific users.
-                        </p>
                       </div>
-                    </td>
-                  </tr>
-                ) : (
-                  users.map((user) => {
-                    const firstName = user.firstName || '';
-                    const lastName = user.lastName || '';
-                    const initials =
-                      (firstName.charAt(0) || '?') + (lastName.charAt(0) || '');
-                    const displayName =
-                      firstName || lastName
-                        ? `${firstName} ${lastName}`.trim()
-                        : 'Unnamed User';
+                    </div>
+                    <div className="h-3 w-40 bg-gray-100 rounded" />
+                    <div className="flex justify-between items-center">
+                      <div className="h-4 w-16 bg-gray-100 rounded-full" />
+                      <div className="h-4 w-16 bg-gray-100 rounded-full" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : users.length === 0 ? (
+              <div className="px-6 py-10 text-center">
+                <div className="flex flex-col items-center justify-center space-y-3">
+                  <div className="rounded-full bg-gray-100 w-12 h-12 flex items-center justify-center">
+                    <Users className="w-5 h-5 text-gray-400" />
+                  </div>
+                  <p className="text-sm font-medium text-gray-700">No users found</p>
+                  <p className="text-xs text-gray-500 max-w-sm">
+                    Try adjusting your filters or search term to find specific users.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="divide-y divide-gray-100">
+                {users.map((user) => {
+                  const firstName = user.firstName || '';
+                  const lastName = user.lastName || '';
+                  const initials =
+                    (firstName.charAt(0) || '?') + (lastName.charAt(0) || '');
+                  const displayName =
+                    firstName || lastName
+                      ? `${firstName} ${lastName}`.trim()
+                      : 'Unnamed User';
 
-                    return (
-                      <tr key={user._id} className="hover:bg-gray-50/60 transition-colors">
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center">
-                            <div className="flex-shrink-0">
-                              <div className="h-10 w-10 rounded-full bg-primary-50 border border-primary-100 flex items-center justify-center">
-                                <span className="text-primary-700 text-xs font-semibold">
-                                  {initials.toUpperCase()}
-                                </span>
-                              </div>
-                            </div>
-                            <div className="ml-3">
-                              <div className="text-sm font-medium text-gray-900">
-                                {displayName}
-                              </div>
-                              <div className="text-[11px] text-gray-400">
-                                ID: {user._id?.slice(-6)}
-                              </div>
-                            </div>
+                  return (
+                    <div
+                      key={user._id}
+                      className="px-4 py-4 space-y-3 hover:bg-gray-50/70 transition-colors"
+                    >
+                      {/* Top row: avatar, name, status */}
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 rounded-full bg-primary-50 border border-primary-100 flex items-center justify-center">
+                            <span className="text-primary-700 text-xs font-semibold">
+                              {initials.toUpperCase()}
+                            </span>
                           </div>
-                        </td>
-
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-900">{user.email}</div>
-                          <div className="text-xs text-gray-500">{user.mobile}</div>
-                        </td>
-
-                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div>
+                            <p className="text-sm font-semibold text-gray-900">
+                              {displayName}
+                            </p>
+                            <p className="text-[11px] text-gray-400">
+                              ID: {user._id?.slice(-6)}
+                            </p>
+                          </div>
+                        </div>
+                        <span
+                          className={`inline-flex items-center px-2 py-0.5 text-[10px] font-medium rounded-full border ${
+                            user.status === 'active'
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
+                              : 'bg-rose-50 text-rose-700 border-rose-100'
+                          }`}
+                        >
                           <span
-                            className={`inline-flex items-center px-2.5 py-1 text-[11px] font-medium rounded-full border ${
-                              user.role === 'admin'
-                                ? 'bg-indigo-50 text-indigo-700 border-indigo-100'
-                                : user.role === 'subadmin'
-                                ? 'bg-sky-50 text-sky-700 border-sky-100'
-                                : 'bg-gray-50 text-gray-700 border-gray-200'
-                            }`}
-                          >
-                            {user.role}
-                          </span>
-                        </td>
-
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span
-                            className={`inline-flex items-center px-2.5 py-1 text-[11px] font-medium rounded-full border ${
+                            className={`w-1.5 h-1.5 rounded-full mr-1.5 ${
                               user.status === 'active'
-                                ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
-                                : 'bg-rose-50 text-rose-700 border-rose-100'
+                                ? 'bg-emerald-500'
+                                : 'bg-rose-500'
                             }`}
-                          >
-                            <span
-                              className={`w-1.5 h-1.5 rounded-full mr-1.5 ${
-                                user.status === 'active'
-                                  ? 'bg-emerald-500'
-                                  : 'bg-rose-500'
-                              }`}
-                            />
-                            {user.status}
-                          </span>
-                        </td>
+                          />
+                          {user.status}
+                        </span>
+                      </div>
 
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {/* Contact */}
+                      <div className="text-xs text-gray-600 space-y-1">
+                        <p className="truncate">{user.email}</p>
+                        {user.mobile && <p className="text-gray-500">{user.mobile}</p>}
+                      </div>
+
+                      {/* Role + joined */}
+                      <div className="flex items-center justify-between text-[11px]">
+                        <span
+                          className={`inline-flex items-center px-2 py-0.5 rounded-full border ${
+                            user.role === 'admin'
+                              ? 'bg-indigo-50 text-indigo-700 border-indigo-100'
+                              : user.role === 'subadmin'
+                              ? 'bg-sky-50 text-sky-700 border-sky-100'
+                              : 'bg-gray-50 text-gray-700 border-gray-200'
+                          }`}
+                        >
+                          {user.role}
+                        </span>
+                        <span className="text-gray-500">
                           {user.createdAt
                             ? new Date(user.createdAt).toLocaleDateString()
                             : '-'}
-                        </td>
+                        </span>
+                      </div>
 
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-right">
-                          <div className="flex justify-end space-x-2">
-                            <Link
-                              to={`/admin/users/${user._id}`}
-                              className="inline-flex items-center justify-center rounded-md border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition"
-                              title="View / Edit"
-                            >
-                              <Edit size={16} className="mr-1" />
-                              Edit
-                            </Link>
+                      {/* Actions */}
+                      <div className="flex flex-wrap gap-2 pt-1">
+                        <Link
+                          to={`/admin/users/${user._id}`}
+                          className="inline-flex items-center justify-center rounded-md border border-gray-200 bg-white px-2.5 py-1.5 text-[11px] font-medium text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition"
+                          title="View / Edit"
+                        >
+                          <Edit size={14} className="mr-1" />
+                          Edit
+                        </Link>
 
-                            <button
-                              onClick={() => handleSuspend(user._id, user.status)}
-                              className={`inline-flex items-center justify-center rounded-md px-2.5 py-1.5 text-xs font-medium border transition ${
-                                user.status === 'active'
-                                  ? 'border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100'
-                                  : 'border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
-                              }`}
-                              title={user.status === 'active' ? 'Suspend' : 'Activate'}
-                            >
-                              {user.status === 'active' ? (
-                                <Ban size={16} className="mr-1" />
-                              ) : (
-                                <CheckCircle size={16} className="mr-1" />
-                              )}
-                              {user.status === 'active' ? 'Suspend' : 'Activate'}
-                            </button>
+                        <button
+                          onClick={() => handleSuspend(user._id, user.status)}
+                          className={`inline-flex items-center justify-center rounded-md px-2.5 py-1.5 text-[11px] font-medium border transition ${
+                            user.status === 'active'
+                              ? 'border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100'
+                              : 'border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+                          }`}
+                          title={user.status === 'active' ? 'Suspend' : 'Activate'}
+                        >
+                          {user.status === 'active' ? (
+                            <Ban size={14} className="mr-1" />
+                          ) : (
+                            <CheckCircle size={14} className="mr-1" />
+                          )}
+                          {user.status === 'active' ? 'Suspend' : 'Activate'}
+                        </button>
 
-                            <button
-                              onClick={() => handleDelete(user._id)}
-                              className="inline-flex items-center justify-center rounded-md border border-rose-200 bg-rose-50 px-2.5 py-1.5 text-xs font-medium text-rose-700 hover:bg-rose-100 transition"
-                              title="Delete"
-                            >
-                              <Trash2 size={16} className="mr-1" />
-                              Delete
-                            </button>
+                        <button
+                          onClick={() => handleDelete(user._id)}
+                          className="inline-flex items-center justify-center rounded-md border border-rose-200 bg-rose-50 px-2.5 py-1.5 text-[11px] font-medium text-rose-700 hover:bg-rose-100 transition"
+                          title="Delete"
+                        >
+                          <Trash2 size={14} className="mr-1" />
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* DESKTOP / TABLET: TABLE VIEW */}
+          <div className="hidden md:block">
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200 text-sm">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-[11px] font-semibold text-gray-500 tracking-wider uppercase">
+                      User
+                    </th>
+                    <th className="px-6 py-3 text-left text-[11px] font-semibold text-gray-500 tracking-wider uppercase">
+                      Contact
+                    </th>
+                    <th className="px-6 py-3 text-left text-[11px] font-semibold text-gray-500 tracking-wider uppercase">
+                      Role
+                    </th>
+                    <th className="px-6 py-3 text-left text-[11px] font-semibold text-gray-500 tracking-wider uppercase">
+                      Status
+                    </th>
+                    <th className="px-6 py-3 text-left text-[11px] font-semibold text-gray-500 tracking-wider uppercase">
+                      Joined
+                    </th>
+                    <th className="px-6 py-3 text-right text-[11px] font-semibold text-gray-500 tracking-wider uppercase">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-100">
+                  {loading ? (
+                    [...Array(5)].map((_, idx) => (
+                      <tr key={idx} className="animate-pulse">
+                        <td className="px-6 py-4">
+                          <div className="flex items-center space-x-3">
+                            <div className="h-10 w-10 rounded-full bg-gray-100" />
+                            <div className="space-y-2">
+                              <div className="h-3 w-32 bg-gray-100 rounded" />
+                              <div className="h-3 w-20 bg-gray-100 rounded" />
+                            </div>
                           </div>
                         </td>
+                        <td className="px-6 py-4">
+                          <div className="h-3 w-32 bg-gray-100 rounded mb-2" />
+                          <div className="h-3 w-24 bg-gray-100 rounded" />
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="h-4 w-16 bg-gray-100 rounded-full" />
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="h-4 w-16 bg-gray-100 rounded-full" />
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="h-3 w-20 bg-gray-100 rounded" />
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <div className="h-3 w-16 bg-gray-100 rounded ml-auto" />
+                        </td>
                       </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
+                    ))
+                  ) : users.length === 0 ? (
+                    <tr>
+                      <td colSpan="6" className="px-6 py-10 text-center">
+                        <div className="flex flex-col items-center justify-center space-y-3">
+                          <div className="rounded-full bg-gray-100 w-12 h-12 flex items-center justify-center">
+                            <Users className="w-5 h-5 text-gray-400" />
+                          </div>
+                          <p className="text-sm font-medium text-gray-700">
+                            No users found
+                          </p>
+                          <p className="text-xs text-gray-500 max-w-sm">
+                            Try adjusting your filters or search term to find specific
+                            users.
+                          </p>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : (
+                    users.map((user) => {
+                      const firstName = user.firstName || '';
+                      const lastName = user.lastName || '';
+                      const initials =
+                        (firstName.charAt(0) || '?') + (lastName.charAt(0) || '');
+                      const displayName =
+                        firstName || lastName
+                          ? `${firstName} ${lastName}`.trim()
+                          : 'Unnamed User';
+
+                      return (
+                        <tr
+                          key={user._id}
+                          className="hover:bg-gray-50/60 transition-colors"
+                        >
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex items-center">
+                              <div className="flex-shrink-0">
+                                <div className="h-10 w-10 rounded-full bg-primary-50 border border-primary-100 flex items-center justify-center">
+                                  <span className="text-primary-700 text-xs font-semibold">
+                                    {initials.toUpperCase()}
+                                  </span>
+                                </div>
+                              </div>
+                              <div className="ml-3">
+                                <div className="text-sm font-medium text-gray-900">
+                                  {displayName}
+                                </div>
+                                <div className="text-[11px] text-gray-400">
+                                  ID: {user._id?.slice(-6)}
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-900">{user.email}</div>
+                            <div className="text-xs text-gray-500">{user.mobile}</div>
+                          </td>
+
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span
+                              className={`inline-flex items-center px-2.5 py-1 text-[11px] font-medium rounded-full border ${
+                                user.role === 'admin'
+                                  ? 'bg-indigo-50 text-indigo-700 border-indigo-100'
+                                  : user.role === 'subadmin'
+                                  ? 'bg-sky-50 text-sky-700 border-sky-100'
+                                  : 'bg-gray-50 text-gray-700 border-gray-200'
+                              }`}
+                            >
+                              {user.role}
+                            </span>
+                          </td>
+
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span
+                              className={`inline-flex items-center px-2.5 py-1 text-[11px] font-medium rounded-full border ${
+                                user.status === 'active'
+                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
+                                  : 'bg-rose-50 text-rose-700 border-rose-100'
+                              }`}
+                            >
+                              <span
+                                className={`w-1.5 h-1.5 rounded-full mr-1.5 ${
+                                  user.status === 'active'
+                                    ? 'bg-emerald-500'
+                                    : 'bg-rose-500'
+                                }`}
+                              />
+                              {user.status}
+                            </span>
+                          </td>
+
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {user.createdAt
+                              ? new Date(user.createdAt).toLocaleDateString()
+                              : '-'}
+                          </td>
+
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-right">
+                            <div className="flex justify-end space-x-2">
+                              <Link
+                                to={`/admin/users/${user._id}`}
+                                className="inline-flex items-center justify-center rounded-md border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition"
+                                title="View / Edit"
+                              >
+                                <Edit size={16} className="mr-1" />
+                                Edit
+                              </Link>
+
+                              <button
+                                onClick={() =>
+                                  handleSuspend(user._id, user.status)
+                                }
+                                className={`inline-flex items-center justify-center rounded-md px-2.5 py-1.5 text-xs font-medium border transition ${
+                                  user.status === 'active'
+                                    ? 'border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100'
+                                    : 'border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+                                }`}
+                                title={
+                                  user.status === 'active' ? 'Suspend' : 'Activate'
+                                }
+                              >
+                                {user.status === 'active' ? (
+                                  <Ban size={16} className="mr-1" />
+                                ) : (
+                                  <CheckCircle size={16} className="mr-1" />
+                                )}
+                                {user.status === 'active' ? 'Suspend' : 'Activate'}
+                              </button>
+
+                              <button
+                                onClick={() => handleDelete(user._id)}
+                                className="inline-flex items-center justify-center rounded-md border border-rose-200 bg-rose-50 px-2.5 py-1.5 text-xs font-medium text-rose-700 hover:bg-rose-100 transition"
+                                title="Delete"
+                              >
+                                <Trash2 size={16} className="mr-1" />
+                                Delete
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
 
           {/* Pagination */}
           {pagination.totalPages > 1 && (
-            <div className="bg-gray-50/80 border-t border-gray-100 px-6 py-3 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            <div className="bg-gray-50/80 border-t border-gray-100 px-4 sm:px-6 py-3 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
               <div className="text-xs md:text-sm text-gray-600">
                 Page{' '}
                 <span className="font-semibold">{pagination.currentPage}</span> of{' '}
@@ -445,7 +612,7 @@ const AdminUsers = () => {
                   onClick={() =>
                     setPagination((prev) => ({
                       ...prev,
-                      currentPage: prev.currentPage - 1,
+                      currentPage: prev.currentPage - 1
                     }))
                   }
                   disabled={pagination.currentPage === 1}
@@ -457,7 +624,7 @@ const AdminUsers = () => {
                   onClick={() =>
                     setPagination((prev) => ({
                       ...prev,
-                      currentPage: prev.currentPage + 1,
+                      currentPage: prev.currentPage + 1
                     }))
                   }
                   disabled={pagination.currentPage === pagination.totalPages}
