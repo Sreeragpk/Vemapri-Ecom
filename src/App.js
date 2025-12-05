@@ -221,6 +221,7 @@ import FAQ from './pages/Faq';
 import DeliveryInfo from './pages/DeliveryInfo';
 import TermsOfService from './pages/TermsofService';
 import About from './pages/About';
+import ScrollProgress from './components/ScrollProgress';
 
 // Protected Route
 const ProtectedRoute = ({ children, adminOnly = false }) => {
@@ -241,11 +242,19 @@ const ProtectedRoute = ({ children, adminOnly = false }) => {
   return children;
 };
 
-// Layout for public pages
+// Layout for public pages with sticky navbar
 const PublicLayout = ({ children }) => (
-  <div className="min-h-screen flex flex-col">
-    <Navbar />
-    <main className="flex-grow">{children}</main>
+  <div className="min-h-screen flex flex-col bg-slate-50">
+    {/* Sticky Navbar - stays at top */}
+    <div className="sticky top-0 z-50">
+      <Navbar />
+    </div>
+    
+    {/* Main content with proper spacing */}
+    <main className="flex-grow">
+      {children}
+    </main>
+    
     <Footer />
   </div>
 );
@@ -258,8 +267,35 @@ function App() {
 
       <AuthProvider>
         <CartProvider>
-          <Toaster position="top-right" toastOptions={{ duration: 3000 }} />
-
+          <Toaster
+            position="top-right"
+            toastOptions={{
+              duration: 3000,
+              style: {
+                background: 'rgba(15, 23, 42, 0.85)', // slate-900 with transparency
+                color: 'white',
+                backdropFilter: 'blur(6px)',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                borderRadius: '10px',
+                padding: '10px 14px',
+                fontSize: '14px',
+                boxShadow: '0 8px 20px rgba(0,0,0,0.25)',
+              },
+              success: {
+                iconTheme: {
+                  primary: '#22c55e', // light green icon only (clean)
+                  secondary: 'white',
+                },
+              },
+              error: {
+                iconTheme: {
+                  primary: '#ef4444',
+                  secondary: 'white',
+                },
+              },
+            }}
+          />
+          <ScrollProgress />
           <Routes>
             {/* ========== Public Routes ========== */}
             <Route path="/" element={<PublicLayout><Home /></PublicLayout>} />
@@ -272,8 +308,8 @@ function App() {
             <Route path="/contact" element={<PublicLayout><ContactUs /></PublicLayout>} />
             <Route path="/faq" element={<PublicLayout><FAQ /></PublicLayout>} />
             <Route path="/shipping" element={<PublicLayout><DeliveryInfo /></PublicLayout>} />
-             <Route path="/terms" element={<PublicLayout><TermsOfService /></PublicLayout>} />
-             <Route path="/about" element={<PublicLayout><About /></PublicLayout>} />
+            <Route path="/terms" element={<PublicLayout><TermsOfService /></PublicLayout>} />
+            <Route path="/about" element={<PublicLayout><About /></PublicLayout>} />
 
             {/* ========== Customer Protected Routes ========== */}
             <Route

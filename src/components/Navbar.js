@@ -16,6 +16,8 @@ import {
   Trash2,
   Plus,
   Minus,
+  ArrowRight,
+  ShoppingBag,
 } from 'lucide-react';
 import api from '../utils/api';
 import logo from '../assets/vemapriicon.png';
@@ -33,11 +35,13 @@ const Navbar = () => {
   });
 
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const [isCartAnimating, setIsCartAnimating] = useState(false);
 
   const categoriesRef = useRef(null);
   const userMenuRef = useRef(null);
   const notificationsRef = useRef(null);
   const cartRef = useRef(null);
+const [scrollProgress, setScrollProgress] = useState(0);
 
   const { user, logout } = useAuth();
   const {
@@ -52,13 +56,24 @@ const Navbar = () => {
   const cartCount = getCartCount();
 
   const groceryCategories = [
-    { name: 'Pulses & Grains', icon: '🌾' },
-    { name: 'Spices & Masalas', icon: '🌶️' },
-    { name: 'Nuts & Seeds', icon: '🥜' },
-    { name: 'Health & Organic Foods', icon: '🥗' },
+    { name: 'Pulses & Grains', icon: '🌾', color: 'from-amber-50 to-amber-100' },
+    { name: 'Spices & Masalas', icon: '🌶️', color: 'from-rose-50 to-rose-100' },
+    { name: 'Nuts & Seeds', icon: '🥜', color: 'from-orange-50 to-orange-100' },
+    { name: 'Health & Organic Foods', icon: '🥗', color: 'from-green-50 to-green-100' },
   ];
-
-  // Scroll shadow effect
+// Add this useEffect for scroll progress
+useEffect(() => {
+  const handleScroll = () => {
+    const windowHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+    const scrolled = (window.scrollY / windowHeight) * 100;
+    setScrollProgress(scrolled);
+    setIsScrolled(window.scrollY > 10);
+  };
+  
+  window.addEventListener('scroll', handleScroll);
+  return () => window.removeEventListener('scroll', handleScroll);
+}, []);
+  // Scroll effect with enhanced shadow
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 10);
@@ -101,14 +116,26 @@ const Navbar = () => {
       ) {
         setNotificationsOpen(false);
       }
-      if (cartRef.current && !cartRef.current.contains(event.target)) {
-        setIsCartOpen(false);
-      }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // Premium cart open/close with animation
+  const openCart = () => {
+    setIsCartOpen(true);
+    setIsCartAnimating(true);
+    document.body.style.overflow = 'hidden';
+  };
+
+  const closeCart = () => {
+    setIsCartAnimating(false);
+    setTimeout(() => {
+      setIsCartOpen(false);
+      document.body.style.overflow = 'unset';
+    }, 300);
+  };
 
   const handleLogout = () => {
     logout();
@@ -121,7 +148,7 @@ const Navbar = () => {
     setIsUserMenuOpen(false);
     setIsCategoriesOpen(false);
     setNotificationsOpen(false);
-    setIsCartOpen(false);
+    closeCart();
   };
 
   const subtotal = getCartTotal();
@@ -129,10 +156,10 @@ const Navbar = () => {
   const LogoBlock = ({ small = false }) => (
     <Link
       to="/"
-      className="flex items-center gap-3 flex-shrink-0"
+      className="flex items-center gap-3 flex-shrink-0 group"
       onClick={closeAllMenus}
     >
-      <div className="h-10 w-10 sm:h-11 sm:w-11 rounded-xl bg-white border border-slate-200 flex items-center justify-center shadow-sm overflow-hidden">
+      <div className="relative h-10 w-10 sm:h-11 sm:w-11 rounded-xl bg-gradient-to-br from-white to-slate-50 border border-slate-200 flex items-center justify-center shadow-sm overflow-hidden group-hover:shadow-md transition-all duration-300 group-hover:scale-105">
         <img
           src={logo}
           alt="Vemapri Logo"
@@ -152,11 +179,11 @@ const Navbar = () => {
       </div>
       {!small && (
         <div className="hidden sm:flex flex-col leading-tight">
-          <span className="text-lg lg:text-xl font-semibold tracking-tight text-slate-900">
+          <span className="text-lg lg:text-xl font-bold tracking-tight bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
             Vemapri
           </span>
-          <span className="text-[10px] lg:text-[11px] uppercase tracking-[0.18em] text-slate-500">
-            {/* Grocery &amp; Food Supplies */}Gudipati Products
+          <span className="text-[10px] lg:text-[11px] uppercase tracking-[0.18em] font-medium text-slate-500">
+            Gudipati Products
           </span>
         </div>
       )}
@@ -166,28 +193,33 @@ const Navbar = () => {
   return (
     <>
       <nav
-        className={`sticky top-0 z-40 border-b border-slate-200 transition-all duration-300 ${
+        className={`sticky top-0 z-40 border-b transition-all duration-500 ${
           isScrolled
-            ? 'bg-white/90 backdrop-blur-xl shadow-sm'
-            : 'bg-white/95 backdrop-blur'
+            ? 'bg-white/80 backdrop-blur-2xl shadow-lg shadow-slate-200/50 border-slate-200/50'
+            : 'bg-white/95 backdrop-blur-md border-slate-200'
         }`}
       >
+        <div 
+  className="absolute top-0 left-0 h-0.5 bg-gradient-to-r from-amber-500 to-amber-600 transition-all duration-300 ease-out"
+  style={{ width: `${scrollProgress}%` }}
+/>
         <div className="max-w-[105rem] mx-auto px-4 sm:px-6 lg:px-8">
-          {/* MOBILE ROW: menu left, logo center, icons right */}
+          {/* MOBILE ROW */}
           <div className="flex h-16 items-center justify-between lg:hidden">
-            {/* Left: mobile menu button */}
             <button
               onClick={() => setIsMenuOpen((prev) => !prev)}
-              className="flex items-center justify-center h-10 w-10 rounded-full border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-all"
+              className="group flex items-center justify-center h-10 w-10 rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-all duration-300 hover:shadow-md"
               aria-label="Toggle menu"
             >
-              {isMenuOpen ? <X size={20} /> : <Menu size={20} />}
+              {isMenuOpen ? (
+                <X size={20} className="transition-transform duration-300 rotate-90" />
+              ) : (
+                <Menu size={20} className="transition-transform duration-300 group-hover:scale-110" />
+              )}
             </button>
 
-            {/* Center: logo */}
             <LogoBlock small />
 
-            {/* Right: account + cart */}
             <div className="flex items-center gap-2">
               {user && (
                 <button
@@ -195,20 +227,21 @@ const Navbar = () => {
                     closeAllMenus();
                     navigate('/profile');
                   }}
-                  className="flex items-center justify-center h-9 w-9 rounded-full bg-slate-900 text-white text-xs font-semibold"
+                  className="relative flex items-center justify-center h-9 w-9 rounded-full bg-gradient-to-br from-slate-800 to-slate-900 text-white text-xs font-bold shadow-md hover:shadow-lg hover:scale-105 transition-all duration-300"
                   aria-label="Account"
                 >
                   {user.firstName?.[0]?.toUpperCase() || 'U'}
+                  <div className="absolute inset-0 rounded-full bg-white opacity-0 hover:opacity-10 transition-opacity" />
                 </button>
               )}
               <button
-                onClick={() => setIsCartOpen(true)}
-                className="relative flex items-center justify-center h-9 w-9 rounded-full border border-slate-900 bg-slate-900 text-slate-50 hover:bg-black hover:border-black transition-all"
+                onClick={openCart}
+                className="relative flex items-center justify-center h-9 w-9 rounded-full bg-gradient-to-br from-slate-800 to-slate-950 text-slate-50 shadow-md hover:shadow-xl hover:scale-105 transition-all duration-300"
                 aria-label="Open cart"
               >
-                <ShoppingCart size={18} />
+                <ShoppingCart size={18} className="relative z-10" />
                 {cartCount > 0 && (
-                  <span className="absolute -top-1.5 -right-1.5 flex h-4 min-w-[16px] px-0.5 items-center justify-center rounded-full bg-amber-500 text-[9px] font-semibold text-white">
+                  <span className="absolute -top-1.5 -right-1.5 flex h-5 min-w-[20px] px-1 items-center justify-center rounded-full bg-gradient-to-br from-amber-400 to-amber-500 text-[9px] font-bold text-white shadow-lg animate-pulse">
                     {cartCount}
                   </span>
                 )}
@@ -218,66 +251,71 @@ const Navbar = () => {
 
           {/* DESKTOP ROW */}
           <div className="hidden lg:flex h-16 items-center justify-between gap-4">
-            {/* Left: Logo + Links */}
             <div className="flex items-center gap-6 lg:gap-8">
               <LogoBlock />
 
-              {/* Desktop Navigation Links */}
               <div className="flex items-center gap-1">
                 <Link
                   to="/products"
                   onClick={closeAllMenus}
-                  className="px-3 py-2 text-sm font-medium text-slate-700 hover:text-slate-900 rounded-md hover:bg-slate-50 transition-colors"
+                  className="relative px-4 py-2 text-sm font-semibold text-slate-700 hover:text-slate-900 rounded-lg hover:bg-slate-50 transition-all duration-300 group"
                 >
                   Shop
+                  <span className="absolute bottom-0 left-1/2 w-0 h-0.5 bg-slate-900 transition-all duration-300 group-hover:w-1/2 group-hover:left-1/4" />
                 </Link>
 
                 {/* Categories dropdown */}
                 <div className="relative" ref={categoriesRef}>
                   <button
                     onClick={() => setIsCategoriesOpen((prev) => !prev)}
-                    className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-md border transition-all ${
+                    className={`flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg border transition-all duration-300 ${
                       isCategoriesOpen
-                        ? 'border-slate-900 text-slate-900 bg-slate-100'
+                        ? 'border-slate-900 text-slate-900 bg-slate-100 shadow-md'
                         : 'border-transparent text-slate-700 hover:text-slate-900 hover:bg-slate-50'
                     }`}
                   >
                     Categories
                     <ChevronDown
                       size={16}
-                      className={`transition-transform ${
+                      className={`transition-all duration-300 ${
                         isCategoriesOpen ? 'rotate-180' : ''
                       }`}
                     />
                   </button>
 
                   {isCategoriesOpen && (
-                    <div className="absolute left-0 mt-2 w-64 rounded-xl border border-slate-200 bg-white shadow-lg overflow-hidden">
-                      <div className="px-4 py-2 border-b border-slate-100">
-                        <p className="text-xs font-semibold tracking-wide text-slate-500">
-                          Browse categories
+                    <div className="absolute left-0 mt-3 w-72 rounded-2xl border border-slate-200 bg-white shadow-2xl overflow-hidden animate-slideDown">
+                      <div className="px-5 py-3 bg-gradient-to-r from-slate-50 to-white border-b border-slate-100">
+                        <p className="text-xs font-bold tracking-wider text-slate-600 uppercase">
+                          Browse Categories
                         </p>
                       </div>
-                      <div className="py-1">
+                      <div className="py-2">
                         {groceryCategories.map((cat) => (
                           <Link
                             key={cat.name}
                             to={`/products?category=${encodeURIComponent(cat.name)}`}
                             onClick={closeAllMenus}
-                            className="flex items-center gap-3 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors"
+                            className="group flex items-center gap-4 px-5 py-3 text-sm font-medium text-slate-700 hover:bg-gradient-to-r hover:from-slate-50 hover:to-white transition-all duration-300"
                           >
-                            <span className="text-lg">{cat.icon}</span>
-                            <span>{cat.name}</span>
+                            <div className={`flex items-center justify-center h-10 w-10 rounded-xl bg-gradient-to-br ${cat.color} shadow-sm group-hover:shadow-md transition-all duration-300 group-hover:scale-110`}>
+                              <span className="text-xl">{cat.icon}</span>
+                            </div>
+                            <span className="flex-1 group-hover:translate-x-1 transition-transform duration-300">
+                              {cat.name}
+                            </span>
+                            <ArrowRight size={16} className="text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                           </Link>
                         ))}
                       </div>
-                      <div className="px-4 py-2 border-t border-slate-100 bg-slate-50">
+                      <div className="px-5 py-3 border-t border-slate-100 bg-gradient-to-r from-slate-50 to-white">
                         <Link
                           to="/products"
                           onClick={closeAllMenus}
-                          className="text-xs font-medium text-slate-900 hover:text-amber-500"
+                          className="group flex items-center gap-2 text-xs font-bold text-slate-900 hover:text-amber-600 transition-colors duration-300"
                         >
-                          View all products →
+                          View all products
+                          <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform duration-300" />
                         </Link>
                       </div>
                     </div>
@@ -287,40 +325,40 @@ const Navbar = () => {
                 <Link
                   to="/about"
                   onClick={closeAllMenus}
-                  className="px-3 py-2 text-sm font-medium text-slate-700 hover:text-slate-900 rounded-md hover:bg-slate-50 transition-colors"
+                  className="relative px-4 py-2 text-sm font-semibold text-slate-700 hover:text-slate-900 rounded-lg hover:bg-slate-50 transition-all duration-300 group"
                 >
                   About
+                  <span className="absolute bottom-0 left-1/2 w-0 h-0.5 bg-slate-900 transition-all duration-300 group-hover:w-1/2 group-hover:left-1/4" />
                 </Link>
               </div>
             </div>
 
-            {/* Right: Search, Notifications, User, Cart */}
             <div className="flex items-center gap-3">
-              {/* Search - Desktop */}
-              <button className="hidden xl:flex items-center gap-2 px-3 py-2 rounded-full bg-slate-50 border border-slate-200 text-slate-600 hover:bg-white hover:border-slate-300 transition-all">
-                <Search size={18} className="text-slate-400" />
-                <span className="text-sm">Search products…</span>
+              {/* Premium Search */}
+              <button className="hidden xl:flex items-center gap-3 px-4 py-2.5 rounded-full bg-gradient-to-r from-slate-50 to-white border border-slate-200 text-slate-600 hover:border-slate-300 hover:shadow-md transition-all duration-300 group">
+                <Search size={18} className="text-slate-400 group-hover:text-slate-600 transition-colors" />
+                <span className="text-sm font-medium">Search products…</span>
               </button>
 
-              {/* Notification Bell (only when logged in) */}
+              {/* Notification Bell */}
               {user && (
                 <div className="relative" ref={notificationsRef}>
                   <button
                     onClick={() => setNotificationsOpen((prev) => !prev)}
-                    className="relative rounded-full border border-slate-200 bg-white p-1.5 text-slate-700 shadow-sm hover:border-slate-400 hover:text-slate-900 hover:shadow-md transition-all"
+                    className="relative rounded-full border border-slate-200 bg-white p-2.5 text-slate-700 shadow-sm hover:border-slate-400 hover:text-slate-900 hover:shadow-lg transition-all duration-300 hover:scale-105"
                   >
                     <Bell size={18} />
                     {notifData.unreadCount > 0 && (
-                      <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-amber-500 text-[10px] font-semibold text-white">
+                      <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-br from-amber-400 to-amber-500 text-[10px] font-bold text-white shadow-lg animate-pulse">
                         {notifData.unreadCount > 9 ? '9+' : notifData.unreadCount}
                       </span>
                     )}
                   </button>
 
                   {notificationsOpen && (
-                    <div className="absolute right-0 mt-2 w-80 rounded-2xl border border-slate-200 bg-white/95 shadow-xl backdrop-blur-sm py-2 text-sm max-h-96 overflow-y-auto">
-                      <div className="flex items-center justify-between px-3 pb-2 border-b border-gray-100">
-                        <span className="font-semibold text-slate-800">
+                    <div className="absolute right-0 mt-3 w-80 rounded-2xl border border-slate-200 bg-white/95 shadow-2xl backdrop-blur-xl py-2 text-sm max-h-96 overflow-y-auto premium-scroll animate-slideDown">
+                      <div className="flex items-center justify-between px-4 pb-3 border-b border-slate-100">
+                        <span className="font-bold text-slate-900">
                           Notifications
                         </span>
                         <button
@@ -339,44 +377,46 @@ const Navbar = () => {
                               console.error(err);
                             }
                           }}
-                          className="text-[11px] text-slate-600 hover:text-slate-900"
+                          className="text-[11px] font-semibold text-slate-600 hover:text-amber-600 transition-colors"
                         >
                           Mark all as read
                         </button>
                       </div>
 
                       {notifData.notifications.length === 0 ? (
-                        <div className="px-3 py-6 text-center text-xs text-gray-500">
+                        <div className="px-4 py-8 text-center text-xs text-slate-500">
+                          <Bell size={24} className="mx-auto mb-2 text-slate-300" />
                           No notifications yet.
                         </div>
                       ) : (
                         notifData.notifications.map((n) => (
                           <div
                             key={n._id}
-                            className={`px-3 py-2 border-b border-gray-50 last:border-b-0 ${
-                              !n.isRead ? 'bg-slate-50' : 'bg-white'
+                            className={`px-4 py-3 border-b border-slate-50 last:border-b-0 transition-colors hover:bg-slate-50 ${
+                              !n.isRead ? 'bg-amber-50/30' : 'bg-white'
                             }`}
                           >
-                            <div className="flex justify-between items-start">
-                              <div>
-                                <div className="text-xs font-semibold text-slate-800">
+                            <div className="flex justify-between items-start gap-3">
+                              <div className="flex-1">
+                                <div className="text-xs font-bold text-slate-900">
                                   {n.title}
                                 </div>
-                                <div className="text-[11px] text-gray-600 mt-0.5">
+                                <div className="text-[11px] text-slate-600 mt-1">
                                   {n.message}
                                 </div>
                                 {n.meta?.orderNumber && (
                                   <Link
                                     to={`/orders/${n.meta.orderId}`}
-                                    className="text-[11px] text-amber-600 mt-1 inline-block hover:text-amber-700"
+                                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-600 mt-2 hover:text-amber-700 transition-colors"
                                     onClick={closeAllMenus}
                                   >
                                     View order #{n.meta.orderNumber}
+                                    <ArrowRight size={12} />
                                   </Link>
                                 )}
                               </div>
                               {!n.isRead && (
-                                <span className="mt-1 h-2 w-2 rounded-full bg-amber-500" />
+                                <span className="mt-1 h-2 w-2 rounded-full bg-gradient-to-br from-amber-400 to-amber-500 shadow-sm" />
                               )}
                             </div>
                           </div>
@@ -387,40 +427,39 @@ const Navbar = () => {
                 </div>
               )}
 
-              {/* User Menu (desktop) */}
+              {/* User Menu */}
               {user ? (
                 <div className="relative" ref={userMenuRef}>
                   <button
                     onClick={() => setIsUserMenuOpen((prev) => !prev)}
-                    className="flex items-center gap-2 h-10 px-3 rounded-full border border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300 transition-all"
+                    className="flex items-center gap-3 h-11 px-4 rounded-full border border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300 hover:shadow-md transition-all duration-300"
                   >
-                    <div className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-900 text-white text-xs font-semibold">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-slate-800 to-slate-900 text-white text-xs font-bold shadow-md">
                       {user.firstName?.[0]?.toUpperCase() || 'U'}
                     </div>
                     <div className="hidden lg:flex flex-col items-start leading-tight">
-                      <span className="text-[10px] text-slate-500">Hello,</span>
-                      <span className="text-sm font-medium text-slate-900 max-w-[110px] truncate">
+                      <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Hello,</span>
+                      <span className="text-sm font-bold text-slate-900 max-w-[110px] truncate">
                         {user.firstName}
                       </span>
                     </div>
                     <ChevronDown
                       size={16}
-                      className={`hidden lg:block text-slate-400 transition-transform ${
+                      className={`hidden lg:block text-slate-400 transition-transform duration-300 ${
                         isUserMenuOpen ? 'rotate-180' : ''
                       }`}
                     />
                   </button>
 
                   {isUserMenuOpen && (
-                    <div className="absolute right-0 mt-2 w-64 rounded-xl border border-slate-200 bg-white shadow-lg overflow-hidden">
-                      {/* Header */}
-                      <div className="px-4 py-3 border-b border-slate-100 bg-slate-50">
+                    <div className="absolute right-0 mt-3 w-72 rounded-2xl border border-slate-200 bg-white shadow-2xl overflow-hidden animate-slideDown">
+                      <div className="px-5 py-4 border-b border-slate-100 bg-gradient-to-br from-slate-50 to-white">
                         <div className="flex items-center gap-3">
-                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-900 text-white text-sm font-semibold">
+                          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-slate-800 to-slate-900 text-white text-sm font-bold shadow-lg">
                             {user.firstName?.[0]?.toUpperCase() || 'U'}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-slate-900 truncate">
+                            <p className="text-sm font-bold text-slate-900 truncate">
                               {user.firstName} {user.lastName}
                             </p>
                             <p className="text-xs text-slate-500 truncate">
@@ -430,19 +469,18 @@ const Navbar = () => {
                         </div>
                       </div>
 
-                      {/* Links */}
-                      <div className="py-1">
+                      <div className="py-2">
                         {user.role === 'admin' && (
                           <Link
                             to="/admin"
                             onClick={closeAllMenus}
-                            className="flex items-center gap-3 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
+                            className="group flex items-center gap-3 px-5 py-3 text-sm font-medium text-slate-700 hover:bg-gradient-to-r hover:from-slate-50 hover:to-white transition-all duration-300"
                           >
-                            <div className="flex h-8 w-8 items-center justify-center rounded-md bg-slate-100 text-slate-700">
+                            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-slate-100 to-slate-200 text-slate-700 shadow-sm group-hover:shadow-md transition-all duration-300 group-hover:scale-110">
                               <Settings size={16} />
                             </div>
-                            <div className="flex flex-col">
-                              <span className="font-medium">Admin Panel</span>
+                            <div className="flex flex-col flex-1">
+                              <span className="font-semibold">Admin Panel</span>
                               <span className="text-xs text-slate-500">
                                 Manage products &amp; orders
                               </span>
@@ -453,30 +491,29 @@ const Navbar = () => {
                         <Link
                           to="/profile"
                           onClick={closeAllMenus}
-                          className="flex items-center gap-3 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
+                          className="group flex items-center gap-3 px-5 py-3 text-sm font-medium text-slate-700 hover:bg-gradient-to-r hover:from-slate-50 hover:to-white transition-all duration-300"
                         >
                           <User size={16} className="text-slate-500" />
-                          My Profile
+                          <span className="group-hover:translate-x-1 transition-transform duration-300">My Profile</span>
                         </Link>
 
                         <Link
                           to="/orders"
                           onClick={closeAllMenus}
-                          className="flex items-center gap-3 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
+                          className="group flex items-center gap-3 px-5 py-3 text-sm font-medium text-slate-700 hover:bg-gradient-to-r hover:from-slate-50 hover:to-white transition-all duration-300"
                         >
                           <Package size={16} className="text-slate-500" />
-                          My Orders
+                          <span className="group-hover:translate-x-1 transition-transform duration-300">My Orders</span>
                         </Link>
                       </div>
 
-                      {/* Logout */}
                       <div className="border-t border-slate-200 py-2">
                         <button
                           onClick={handleLogout}
-                          className="flex w-full items-center gap-3 px-4 py-2 text-sm font-medium text-rose-600 hover:bg-rose-50 transition-colors"
+                          className="group flex w-full items-center gap-3 px-5 py-3 text-sm font-bold text-rose-600 hover:bg-rose-50 transition-all duration-300"
                         >
                           <LogOut size={16} />
-                          Logout
+                          <span className="group-hover:translate-x-1 transition-transform duration-300">Logout</span>
                         </button>
                       </div>
                     </div>
@@ -487,30 +524,30 @@ const Navbar = () => {
                   <Link
                     to="/login"
                     onClick={closeAllMenus}
-                    className="px-3 py-2 text-sm font-medium text-slate-700 hover:text-slate-900 rounded-md hover:bg-slate-50 transition-colors"
+                    className="px-4 py-2 text-sm font-semibold text-slate-700 hover:text-slate-900 rounded-lg hover:bg-slate-50 transition-all duration-300"
                   >
                     Sign In
                   </Link>
                   <Link
                     to="/register"
                     onClick={closeAllMenus}
-                    className="px-3 py-2 text-sm font-semibold text-white bg-slate-900 hover:bg-black rounded-full shadow-sm hover:shadow-md transition-all"
+                    className="px-5 py-2.5 text-sm font-bold text-white bg-gradient-to-r from-slate-800 to-slate-900 hover:from-slate-900 hover:to-black rounded-full shadow-md hover:shadow-xl transition-all duration-300 hover:scale-105"
                   >
                     Register
                   </Link>
                 </div>
               )}
 
-              {/* Cart trigger (desktop) */}
+              {/* Cart button (desktop) */}
               <button
-                onClick={() => setIsCartOpen(true)}
-                className="relative hidden lg:flex items-center gap-2 h-10 px-4 rounded-full border border-slate-900 bg-slate-900 text-slate-50 hover:bg-black hover:border-black transition-all"
+                onClick={openCart}
+                className="relative hidden lg:flex items-center gap-2 h-11 px-5 rounded-full bg-gradient-to-r from-slate-800 to-slate-950 text-slate-50 shadow-md hover:shadow-xl transition-all duration-300 hover:scale-105 group"
                 aria-label="Open cart"
               >
-                <ShoppingCart size={18} />
-                <span className="text-sm font-medium">Cart</span>
+                <ShoppingCart size={18} className="group-hover:scale-110 transition-transform duration-300" />
+                <span className="text-sm font-bold">Cart</span>
                 {cartCount > 0 && (
-                  <span className="absolute -top-2 -right-2 flex h-5 min-w-[20px] px-1 items-center justify-center rounded-full bg-amber-500 text-[10px] font-semibold text-white">
+                  <span className="absolute -top-2 -right-2 flex h-6 min-w-[24px] px-1.5 items-center justify-center rounded-full bg-gradient-to-br from-amber-400 to-amber-500 text-[10px] font-bold text-white shadow-lg animate-pulse">
                     {cartCount}
                   </span>
                 )}
@@ -520,29 +557,27 @@ const Navbar = () => {
         </div>
       </nav>
 
-      {/* Mobile Menu - fixed under navbar and scrollable */}
+      {/* Mobile Menu */}
       {isMenuOpen && (
-        <div className="lg:hidden fixed inset-x-0 top-16 bottom-0 z-30 border-t border-slate-200 bg-white shadow-lg">
-          <div className="max-w-[105rem] mx-auto px-4 pt-4 pb-8 space-y-1 overflow-y-auto">
-            {/* Search - Mobile */}
-            <div className="mb-3">
-              <button className="flex items-center gap-3 w-full px-3 py-2 rounded-full bg-slate-50 border border-slate-200 text-slate-600">
+        <div className="lg:hidden fixed inset-x-0 top-16 bottom-0 z-30 border-t border-slate-200 bg-white/95 backdrop-blur-xl shadow-2xl animate-slideDown">
+          <div className="max-w-[105rem] mx-auto px-4 pt-4 pb-8 space-y-1 overflow-y-auto h-full hide-scrollbar">
+            <div className="mb-4">
+              <button className="flex items-center gap-3 w-full px-4 py-3 rounded-xl bg-gradient-to-r from-slate-50 to-white border border-slate-200 text-slate-600 hover:border-slate-300 hover:shadow-md transition-all duration-300">
                 <Search size={18} />
-                <span className="text-sm">Search products…</span>
+                <span className="text-sm font-medium">Search products…</span>
               </button>
             </div>
 
             <Link
               to="/products"
               onClick={closeAllMenus}
-              className="block px-3 py-2 text-sm font-medium text-slate-800 hover:bg-slate-50 hover:text-slate-900 rounded-md transition-colors"
+              className="block px-4 py-3 text-sm font-semibold text-slate-800 hover:bg-gradient-to-r hover:from-slate-50 hover:to-white rounded-xl transition-all duration-300"
             >
               Shop
             </Link>
 
-            {/* Categories */}
-            <div className="pt-2">
-              <p className="px-3 pb-1 text-xs font-semibold tracking-wide text-slate-500 uppercase">
+            <div className="pt-3">
+              <p className="px-4 pb-2 text-xs font-bold tracking-wider text-slate-500 uppercase">
                 Categories
               </p>
               {groceryCategories.map((cat) => (
@@ -550,10 +585,13 @@ const Navbar = () => {
                   key={cat.name}
                   to={`/products?category=${encodeURIComponent(cat.name)}`}
                   onClick={closeAllMenus}
-                  className="flex items-center gap-3 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 hover:text-slate-900 rounded-md transition-colors"
+                  className="group flex items-center gap-3 px-4 py-3 text-sm font-medium text-slate-700 hover:bg-gradient-to-r hover:from-slate-50 hover:to-white rounded-xl transition-all duration-300"
                 >
-                  <span className="text-lg">{cat.icon}</span>
-                  {cat.name}
+                  <div className={`flex items-center justify-center h-9 w-9 rounded-xl bg-gradient-to-br ${cat.color} shadow-sm group-hover:shadow-md transition-all duration-300 group-hover:scale-110`}>
+                    <span className="text-lg">{cat.icon}</span>
+                  </div>
+                  <span className="flex-1">{cat.name}</span>
+                  <ArrowRight size={16} className="text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                 </Link>
               ))}
             </div>
@@ -561,20 +599,19 @@ const Navbar = () => {
             <Link
               to="/about"
               onClick={closeAllMenus}
-              className="block px-3 py-2 text-sm font-medium text-slate-800 hover:bg-slate-50 hover:text-slate-900 rounded-md transition-colors"
+              className="block px-4 py-3 text-sm font-semibold text-slate-800 hover:bg-gradient-to-r hover:from-slate-50 hover:to-white rounded-xl transition-all duration-300"
             >
               About
             </Link>
 
-            {/* Auth / user section in mobile menu */}
             {user ? (
               <div className="pt-4 mt-3 border-t border-slate-200 space-y-2 mb-4">
-                <div className="flex items-center gap-3 px-3">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-900 text-white text-xs font-semibold">
+                <div className="flex items-center gap-3 px-4 py-2">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-slate-800 to-slate-900 text-white text-xs font-bold shadow-md">
                     {user.firstName?.[0]?.toUpperCase() || 'U'}
                   </div>
                   <div className="flex flex-col">
-                    <span className="text-sm font-medium text-slate-900">
+                    <span className="text-sm font-bold text-slate-900">
                       {user.firstName} {user.lastName}
                     </span>
                     <span className="text-xs text-slate-500">
@@ -587,7 +624,7 @@ const Navbar = () => {
                   <Link
                     to="/admin"
                     onClick={closeAllMenus}
-                    className="flex items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 rounded-md"
+                    className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-slate-700 hover:bg-gradient-to-r hover:from-slate-50 hover:to-white rounded-xl transition-all duration-300"
                   >
                     <Settings size={16} className="text-slate-500" />
                     Admin Panel
@@ -597,7 +634,7 @@ const Navbar = () => {
                 <Link
                   to="/profile"
                   onClick={closeAllMenus}
-                  className="flex items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 rounded-md"
+                  className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-slate-700 hover:bg-gradient-to-r hover:from-slate-50 hover:to-white rounded-xl transition-all duration-300"
                 >
                   <User size={16} className="text-slate-500" />
                   My Profile
@@ -606,7 +643,7 @@ const Navbar = () => {
                 <Link
                   to="/orders"
                   onClick={closeAllMenus}
-                  className="flex items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 rounded-md"
+                  className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-slate-700 hover:bg-gradient-to-r hover:from-slate-50 hover:to-white rounded-xl transition-all duration-300"
                 >
                   <Package size={16} className="text-slate-500" />
                   My Orders
@@ -614,25 +651,25 @@ const Navbar = () => {
 
                 <button
                   onClick={handleLogout}
-                  className="flex items-center gap-2 w-full px-3 py-2 text-sm font-medium text-rose-600 hover:bg-rose-50 rounded-md"
+                  className="flex items-center gap-3 w-full px-4 py-3 text-sm font-bold text-rose-600 hover:bg-rose-50 rounded-xl transition-all duration-300"
                 >
                   <LogOut size={16} />
                   Logout
                 </button>
               </div>
             ) : (
-              <div className="pt-4 mt-3 border-t border-slate-200 space-y-2 mb-4">
+              <div className="pt-4 mt-3 border-t border-slate-200 space-y-3 mb-4">
                 <Link
                   to="/login"
                   onClick={closeAllMenus}
-                  className="block px-3 py-2 text-center text-sm font-medium text-slate-700 border border-slate-200 rounded-md hover:bg-slate-50 transition-all"
+                  className="block px-4 py-3 text-center text-sm font-semibold text-slate-700 border border-slate-200 rounded-xl hover:bg-slate-50 hover:border-slate-300 transition-all duration-300"
                 >
                   Sign In
                 </Link>
                 <Link
                   to="/register"
                   onClick={closeAllMenus}
-                  className="block px-3 py-2 text-center text-sm font-semibold text-white bg-slate-900 rounded-full shadow-sm hover:bg-black hover:shadow-md transition-all"
+                  className="block px-4 py-3 text-center text-sm font-bold text-white bg-gradient-to-r from-slate-800 to-slate-900 rounded-xl shadow-md hover:shadow-xl transition-all duration-300"
                 >
                   Create Account
                 </Link>
@@ -642,91 +679,103 @@ const Navbar = () => {
         </div>
       )}
 
-      {/* CART RIGHT SIDEBAR WITH ITEMS */}
+      {/* PREMIUM CART SIDEBAR */}
       {isCartOpen && (
         <>
-          {/* Overlay */}
+          {/* Premium Overlay with blur */}
           <div
-            className="fixed inset-0 z-40 bg-black/40"
-            onClick={() => setIsCartOpen(false)}
+            className={`fixed inset-0 z-40 bg-black/60 backdrop-blur-sm transition-opacity duration-300 ${
+              isCartAnimating ? 'opacity-100' : 'opacity-0'
+            }`}
+            onClick={closeCart}
           />
-          {/* Drawer */}
+          
+          {/* Premium Drawer */}
           <aside
             ref={cartRef}
-            className="fixed inset-y-0 right-0 z-50 w-full max-w-md bg-white shadow-2xl border-l border-slate-200 flex flex-col"
+            className={`fixed inset-y-0 right-0 z-50 w-full max-w-md bg-white shadow-2xl flex flex-col transition-transform duration-300 ease-out ${
+              isCartAnimating ? 'translate-x-0' : 'translate-x-full'
+            }`}
+            style={{
+              boxShadow: '-20px 0 40px -10px rgba(0, 0, 0, 0.2)',
+            }}
           >
-            {/* Header */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200">
+            {/* Premium Header */}
+            <div className="relative flex items-center justify-between px-6 py-4 bg-gradient-to-r from-slate-50 to-white border-b border-slate-200">
               <div>
-                <p className="text-sm font-semibold text-slate-900">
-                  Your cart
-                </p>
-                <p className="text-xs text-slate-500">
+                <div className="flex items-center gap-2">
+                  <ShoppingBag size={20} className="text-slate-700" />
+                  <h2 className="text-lg font-bold text-slate-900">Shopping Cart</h2>
+                </div>
+                <p className="text-xs text-slate-500 mt-0.5">
                   {cartCount === 0
-                    ? 'No items added yet.'
-                    : `${cartCount} item${cartCount > 1 ? 's' : ''} in your cart`}
+                    ? 'Your cart is empty'
+                    : `${cartCount} item${cartCount > 1 ? 's' : ''} • ₹${subtotal.toLocaleString()}`}
                 </p>
               </div>
               <button
-                onClick={() => setIsCartOpen(false)}
-                className="h-8 w-8 flex items-center justify-center rounded-full border border-slate-200 text-slate-500 hover:bg-slate-50"
+                onClick={closeCart}
+                className="flex items-center justify-center h-9 w-9 rounded-full border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-900 hover:border-slate-300 hover:shadow-md transition-all duration-300 hover:rotate-90"
               >
-                <X size={16} />
+                <X size={18} />
               </button>
             </div>
 
             {/* Body */}
             <div className="flex-1 flex flex-col overflow-hidden">
               {cartItems.length === 0 ? (
-                <div className="flex-1 flex flex-col items-center justify-center text-center text-sm text-slate-500 px-4">
-                  <ShoppingCart size={32} className="mb-3 text-slate-300" />
-                  <p className="mb-1 font-medium text-slate-700">
+                <div className="flex-1 flex flex-col items-center justify-center text-center px-6">
+                  <div className="relative mb-6">
+                    <div className="absolute inset-0 bg-gradient-to-r from-amber-100 to-amber-200 rounded-full blur-2xl opacity-40 animate-pulse" />
+                    <div className="relative flex items-center justify-center h-24 w-24 rounded-full bg-gradient-to-br from-slate-100 to-slate-200 shadow-lg">
+                      <ShoppingBag size={40} className="text-slate-400" />
+                    </div>
+                  </div>
+                  <h3 className="text-lg font-bold text-slate-900 mb-2">
                     Your cart is empty
-                  </p>
-                  <p className="mb-4 text-xs text-slate-500">
-                    Start adding products to see them here.
+                  </h3>
+                  <p className="text-sm text-slate-500 mb-6 max-w-xs">
+                    Looks like you haven't added anything to your cart yet. Start shopping to fill it up!
                   </p>
                   <button
                     onClick={() => {
-                      setIsCartOpen(false);
+                      closeCart();
                       navigate('/products');
                     }}
-                    className="px-4 py-2 rounded-full bg-slate-900 text-white text-sm font-medium hover:bg-black"
+                    className="group flex items-center gap-2 px-6 py-3 rounded-full bg-gradient-to-r from-slate-800 to-slate-900 text-white text-sm font-bold shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300"
                   >
-                    Browse products
+                    Start Shopping
+                    <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform duration-300" />
                   </button>
                 </div>
               ) : (
                 <>
-                  {/* Items list */}
-                  <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
-                    {cartItems.map((item) => {
-                      const price =
-                        item.product.discountPrice || item.product.price;
+                  {/* Items list with premium styling */}
+                  <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4  premium-scroll">
+                    {cartItems.map((item, index) => {
+                      const price = item.product.discountPrice || item.product.price;
                       const subtotalItem = price * item.quantity;
                       const isMinQty = item.quantity <= 1;
-                      const isMaxQty =
-                        item.product.stock &&
-                        item.quantity >= item.product.stock;
+                      const isMaxQty = item.product.stock && item.quantity >= item.product.stock;
 
                       return (
                         <div
                           key={item.product._id}
-                          className="flex gap-3 border border-slate-100 rounded-xl p-3"
+                          className="group relative flex gap-4 p-4 border border-slate-200 rounded-2xl bg-gradient-to-br from-white to-slate-50 hover:shadow-lg hover:border-slate-300 transition-all duration-300"
+                          style={{
+                            animation: `slideIn 0.3s ease-out ${index * 0.05}s both`,
+                          }}
                         >
                           <Link
                             to={`/products/${item.product._id}`}
-                            onClick={() => setIsCartOpen(false)}
-                            className="flex-shrink-0"
+                            onClick={closeCart}
+                            className="flex-shrink-0 group/image"
                           >
-                            <div className="h-16 w-16 rounded-lg border border-slate-200 bg-white flex items-center justify-center overflow-hidden">
+                            <div className="relative h-20 w-20 rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm group-hover/image:shadow-md transition-all duration-300">
                               <img
-                                src={
-                                  item.product.images?.[0]?.url ||
-                                  '/placeholder.png'
-                                }
+                                src={item.product.images?.[0]?.url || '/placeholder.png'}
                                 alt={item.product.name}
-                                className="h-full w-full object-contain"
+                                className="h-full w-full object-contain group-hover/image:scale-110 transition-transform duration-500"
                               />
                             </div>
                           </Link>
@@ -735,65 +784,59 @@ const Navbar = () => {
                             <div>
                               <Link
                                 to={`/products/${item.product._id}`}
-                                onClick={() => setIsCartOpen(false)}
-                                className="text-sm font-semibold text-slate-900 line-clamp-2 hover:text-slate-700"
+                                onClick={closeCart}
+                                className="text-sm font-bold text-slate-900 line-clamp-2 hover:text-slate-700 transition-colors"
                               >
                                 {item.product.name}
                               </Link>
-                              <p className="mt-0.5 text-[11px] text-slate-500">
+                              <p className="mt-1 text-[11px] font-medium text-slate-500 uppercase tracking-wider">
                                 {item.product.category}
                               </p>
                             </div>
 
-                            <div className="mt-1 flex items-center justify-between">
-                              <div className="text-sm font-semibold text-slate-900">
-                                ₹{price.toLocaleString()}
-                              </div>
-                              <div className="text-xs text-slate-500">
-                                Subtotal:{' '}
-                                <span className="font-semibold text-slate-900">
-                                  ₹{subtotalItem.toLocaleString()}
+                            <div className="mt-2 flex items-center justify-between">
+                              <div className="flex items-baseline gap-2">
+                                <span className="text-base font-bold text-slate-900">
+                                  ₹{price.toLocaleString()}
                                 </span>
+                                {item.product.discountPrice && (
+                                  <span className="text-xs text-slate-400 line-through">
+                                    ₹{item.product.price.toLocaleString()}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="text-xs font-semibold text-slate-500">
+                                Total: <span className="text-slate-900">₹{subtotalItem.toLocaleString()}</span>
                               </div>
                             </div>
 
-                            <div className="mt-2 flex items-center justify-between">
-                              {/* Qty controls */}
-                              <div className="inline-flex items-center rounded-full bg-slate-50 border border-slate-200 px-1.5 py-1">
+                            <div className="mt-3 flex items-center justify-between">
+                              {/* Premium Qty controls */}
+                              <div className="inline-flex items-center rounded-full bg-white border border-slate-200 shadow-sm px-2 py-1.5">
                                 <button
-                                  onClick={() =>
-                                    updateQuantity(
-                                      item.product._id,
-                                      item.quantity - 1
-                                    )
-                                  }
+                                  onClick={() => updateQuantity(item.product._id, item.quantity - 1)}
                                   disabled={isMinQty}
-                                  className="flex h-6 w-6 items-center justify-center rounded-full text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed"
+                                  className="flex h-6 w-6 items-center justify-center rounded-full text-slate-600 hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-300 hover:scale-110 active:scale-95"
                                 >
-                                  <Minus size={12} />
+                                  <Minus size={12} strokeWidth={3} />
                                 </button>
-                                <span className="mx-2 min-w-[28px] text-center text-xs font-semibold text-slate-900">
+                                <span className="mx-3 min-w-[32px] text-center text-sm font-bold text-slate-900">
                                   {item.quantity}
                                 </span>
                                 <button
-                                  onClick={() =>
-                                    updateQuantity(
-                                      item.product._id,
-                                      item.quantity + 1
-                                    )
-                                  }
+                                  onClick={() => updateQuantity(item.product._id, item.quantity + 1)}
                                   disabled={isMaxQty}
-                                  className="flex h-6 w-6 items-center justify-center rounded-full text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed"
+                                  className="flex h-6 w-6 items-center justify-center rounded-full text-slate-600 hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-300 hover:scale-110 active:scale-95"
                                 >
-                                  <Plus size={12} />
+                                  <Plus size={12} strokeWidth={3} />
                                 </button>
                               </div>
 
                               <button
                                 onClick={() => removeFromCart(item.product._id)}
-                                className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-400 hover:text-rose-500"
+                                className="group/delete inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold text-slate-400 hover:text-rose-500 hover:bg-rose-50 transition-all duration-300"
                               >
-                                <Trash2 size={12} />
+                                <Trash2 size={12} className="group-hover/delete:scale-110 transition-transform duration-300" />
                                 Remove
                               </button>
                             </div>
@@ -803,36 +846,43 @@ const Navbar = () => {
                     })}
                   </div>
 
-                  {/* Summary + actions */}
-                  <div className="border-t border-slate-200 px-4 py-4">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm text-slate-600">Subtotal</span>
-                      <span className="text-lg font-semibold text-slate-900">
-                        ₹{subtotal.toLocaleString()}
-                      </span>
+                  {/* Premium Summary + Actions */}
+                  <div className="border-t border-slate-200 bg-gradient-to-b from-white to-slate-50 px-6 py-5">
+                    <div className="space-y-3 mb-5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-semibold text-slate-600">Subtotal</span>
+                        <span className="text-2xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
+                          ₹{subtotal.toLocaleString()}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-500 flex items-center gap-1">
+                        <span className="inline-block h-1 w-1 rounded-full bg-slate-400" />
+                        Taxes and shipping calculated at checkout
+                      </p>
                     </div>
-                    <p className="text-[11px] text-slate-500 mb-3">
-                      Taxes and shipping calculated at checkout.
-                    </p>
 
-                    <button
-                      onClick={() => {
-                        setIsCartOpen(false);
-                        navigate('/cart');
-                      }}
-                      className="w-full mb-2 px-4 py-2.5 rounded-full bg-slate-900 text-white text-sm font-semibold hover:bg-black transition-all"
-                    >
-                      View full cart
-                    </button>
-                    <button
-                      onClick={() => {
-                        setIsCartOpen(false);
-                        navigate('/checkout');
-                      }}
-                      className="w-full px-4 py-2.5 rounded-full border border-slate-900 text-sm font-semibold text-slate-900 hover:bg-slate-50 transition-all"
-                    >
-                      Proceed to checkout
-                    </button>
+                    <div className="space-y-3">
+                      <button
+                        onClick={() => {
+                          closeCart();
+                          navigate('/checkout');
+                        }}
+                        className="group w-full flex items-center justify-center gap-2 px-6 py-3.5 rounded-full bg-gradient-to-r from-slate-800 to-slate-950 text-white text-sm font-bold shadow-lg hover:shadow-xl hover:scale-[1.02] transition-all duration-300"
+                      >
+                        Proceed to Checkout
+                        <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform duration-300" />
+                      </button>
+                      
+                      <button
+                        onClick={() => {
+                          closeCart();
+                          navigate('/cart');
+                        }}
+                        className="w-full px-6 py-3 rounded-full border-2 border-slate-900 text-sm font-bold text-slate-900 hover:bg-slate-900 hover:text-white transition-all duration-300"
+                      >
+                        View Full Cart
+                      </button>
+                    </div>
                   </div>
                 </>
               )}
@@ -840,6 +890,52 @@ const Navbar = () => {
           </aside>
         </>
       )}
+
+      {/* Add these animations to your global CSS or tailwind config */}
+      <style jsx>{`
+        @keyframes slideDown {
+          from {
+            opacity: 0;
+            transform: translateY(-10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        @keyframes slideIn {
+          from {
+            opacity: 0;
+            transform: translateX(20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateX(0);
+          }
+        }
+
+        .animate-slideDown {
+          animation: slideDown 0.3s ease-out;
+        }
+
+        .scrollbar-thin::-webkit-scrollbar {
+          width: 6px;
+        }
+
+        .scrollbar-thin::-webkit-scrollbar-track {
+          background: transparent;
+        }
+
+        .scrollbar-thin::-webkit-scrollbar-thumb {
+          background: #cbd5e1;
+          border-radius: 3px;
+        }
+
+        .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+          background: #94a3b8;
+        }
+      `}</style>
     </>
   );
 };

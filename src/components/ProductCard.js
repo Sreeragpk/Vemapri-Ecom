@@ -229,26 +229,21 @@ import { useCart } from '../context/CartContext';
 import toast from 'react-hot-toast';
 
 const ProductCard = ({ product }) => {
-  const { addToCart } = useCart();
+  const { addToCart, cartItems } = useCart();
 
-  const handleAddToCart = (e) => {
-    e.preventDefault(); // prevent Link navigation when clicking button
+  // find existing quantity in cart for this product
+  const existingItem = cartItems?.find(
+    (item) => item.product._id === product._id
+  );
+  const currentQtyInCart = existingItem ? existingItem.quantity : 0;
 
-    if (product.stock <= 0) {
-      toast.error('Product is out of stock');
-      return;
-    }
-
-    addToCart(product);
-    toast.success('Added to cart!');
-  };
+  const isOutOfStock = product.stock <= 0;
+  const isAtStockLimit = currentQtyInCart >= product.stock; // already added all available
+  const isLowStock = product.stock > 0 && product.stock <= 5;
 
   const displayPrice = product.discountPrice || product.price;
   const hasDiscount =
     product.discountPrice && product.discountPrice < product.price;
-  const isOutOfStock = product.stock <= 0;
-  const isLowStock = product.stock > 0 && product.stock <= 5;
-
   const hasRatings = product.ratings?.average && product.ratings?.count > 0;
 
   const discountPercent = hasDiscount
@@ -256,6 +251,25 @@ const ProductCard = ({ product }) => {
         ((product.price - product.discountPrice) / product.price) * 100
       )
     : null;
+
+  const handleAddToCart = (e) => {
+    e.preventDefault(); // prevent navigation
+
+    if (isOutOfStock) {
+      toast.error('Product is out of stock');
+      return;
+    }
+
+    if (isAtStockLimit) {
+      toast.error(
+        `You already added the maximum available quantity (${product.stock}).`
+      );
+      return;
+    }
+
+    addToCart(product);
+    toast.success('Added to cart!');
+  };
 
   return (
     <Link to={`/products/${product._id}`} className="group block h-full">
@@ -268,7 +282,7 @@ const ProductCard = ({ product }) => {
                 src={product.images[0].url}
                 alt={product.name}
                 className={`h-full w-full object-cover transition-transform duration-300 group-hover:scale-105 ${
-                  isOutOfStock ? 'opacity-60' : ''
+                  isOutOfStock || isAtStockLimit ? 'opacity-60' : ''
                 }`}
               />
             )}
@@ -312,9 +326,9 @@ const ProductCard = ({ product }) => {
               </div>
             )}
 
-            {isOutOfStock && (
+            {(isOutOfStock || isAtStockLimit) && (
               <div className="rounded-full bg-gray-900/90 px-3 py-1 text-[11px] font-semibold text-white shadow-sm">
-                Sold Out
+                {isOutOfStock ? 'Sold Out' : 'Limit Reached'}
               </div>
             )}
           </div>
@@ -384,6 +398,10 @@ const ProductCard = ({ product }) => {
               <p className="text-[12px] font-semibold text-red-600">
                 Out of stock
               </p>
+            ) : isAtStockLimit ? (
+              <p className="text-[12px] font-semibold text-orange-600">
+                You added all available stock ({product.stock}).
+              </p>
             ) : isLowStock ? (
               <p className="text-[12px] font-semibold text-orange-600">
                 Only {product.stock} items left – order soon!
@@ -429,15 +447,19 @@ const ProductCard = ({ product }) => {
           {/* Add to Cart Button */}
           <button
             onClick={handleAddToCart}
-            disabled={isOutOfStock}
+            disabled={isOutOfStock || isAtStockLimit}
             className={`mt-auto inline-flex w-full items-center justify-center rounded-full px-4 py-2.5 text-sm font-semibold transition-all ${
-              isOutOfStock
+              isOutOfStock || isAtStockLimit
                 ? 'cursor-not-allowed bg-gray-100 text-gray-400'
                 : 'bg-gray-900 text-white shadow-sm hover:bg-black hover:shadow-md'
             }`}
           >
             <ShoppingCart size={18} className="mr-2" />
-            {isOutOfStock ? 'Out of stock' : 'Add to cart'}
+            {isOutOfStock
+              ? 'Out of stock'
+              : isAtStockLimit
+              ? 'Max quantity in cart'
+              : 'Add to cart'}
           </button>
         </div>
       </div>
@@ -446,3 +468,4 @@ const ProductCard = ({ product }) => {
 };
 
 export default ProductCard;
+
