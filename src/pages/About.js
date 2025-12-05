@@ -75,31 +75,31 @@ const About = () => {
 
   const milestones = [
     {
-      year: '2024',
+      year: '2025',
       month: 'June',
       title: 'The Dream Begins',
       description: 'Vemapri was founded with a vision to bring authentic, quality groceries to Bengaluru households at honest prices.'
     },
     {
-      year: '2024',
+      year: '2025',
       month: 'September',
       title: 'First Deliveries',
       description: 'Started operations in Electronic City area with our initial product range of essential spices, pulses, and grains.'
     },
     {
-      year: '2024',
+      year: '2025',
       month: 'October',
       title: 'Growing Trust',
       description: 'Reached 50+ regular customers and expanded our product range based on customer feedback and demand.'
     },
     {
-      year: '2024',
+      year: '2025',
       month: 'November',
       title: 'Community Building',
       description: 'Established partnerships with local farmers and introduced organic product line to serve health-conscious customers.'
     },
     {
-      year: '2024',
+      year: '2025',
       month: 'December',
       title: 'Expanding Reach',
       description: 'Now serving 100+ customers across Bengaluru with same-day delivery and a growing product catalog.'
@@ -164,7 +164,7 @@ const About = () => {
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-500/20 border border-emerald-400/30 backdrop-blur-sm mb-8">
               <Sunrise size={16} className="text-emerald-400" />
               <span className="text-sm font-semibold uppercase tracking-wider text-emerald-200">
-                New Local Brand • Established 2024
+                New Local Brand • Established 2025',
               </span>
             </div>
             
@@ -267,7 +267,7 @@ const About = () => {
               <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
                 <div className="prose prose-lg max-w-none">
                   <p className="text-slate-700 leading-relaxed mb-4">
-                    Vemapri was born in 2024 from a simple observation: Bengaluru families deserve better access 
+                    Vemapri was born in 2025', a simple observation: Bengaluru families deserve better access 
                     to quality groceries without compromising on authenticity or breaking the bank.
                   </p>
                   <p className="text-slate-700 leading-relaxed mb-4">
@@ -356,7 +356,7 @@ const About = () => {
               </span>
             </div>
             <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">
-              2024: Our First Year
+              2025', First Year
             </h2>
             <p className="text-lg text-slate-600 max-w-3xl mx-auto">
               Every step of our journey so far
