@@ -1613,18 +1613,18 @@
 //             </div>
 //           </div>
 //         </div>
-//       </div> 
+//       </div>
 //     </div>
 //   );
 // };
 
 // export default Checkout;
-import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useCart } from '../context/CartContext';
-import { useAuth } from '../context/AuthContext';
-import api from '../utils/api';
-import toast from 'react-hot-toast';
+import React, { useState, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
+import { useCart } from "../context/CartContext";
+import { useAuth } from "../context/AuthContext";
+import api from "../utils/api";
+import toast from "react-hot-toast";
 import {
   MapPin,
   Home,
@@ -1634,7 +1634,7 @@ import {
   ShieldCheck,
   Truck,
   AlertCircle,
-} from 'lucide-react';
+} from "lucide-react";
 
 const Checkout = () => {
   const navigate = useNavigate();
@@ -1646,27 +1646,27 @@ const Checkout = () => {
   const [loading, setLoading] = useState(false);
   const [showAddressForm, setShowAddressForm] = useState(false);
   const [newAddress, setNewAddress] = useState({
-    type: 'home',
-    addressLine1: '',
-    addressLine2: '',
-    city: '',
-    state: '',
-    zipCode: '',
-    country: 'India',
+    type: "home",
+    addressLine1: "",
+    addressLine2: "",
+    city: "",
+    state: "",
+    zipCode: "",
+    country: "India",
   });
 
   // PIN code helper state
   const [pinLoading, setPinLoading] = useState(false);
-  const [pinError, setPinError] = useState('');
+  const [pinError, setPinError] = useState("");
 
   // 🔢 Your WhatsApp business number (country code + number, no + sign)
   // Example: '919876543210'
-  const WHATSAPP_NUMBER = '917204929407';
+  const WHATSAPP_NUMBER = "917204929407";
 
   // fetchAddresses is used in useEffect and after add address
   const fetchAddresses = useCallback(async () => {
     try {
-      const res = await api.get('/users/profile');
+      const res = await api.get("/users/profile");
       const userAddresses = res.data.addresses || [];
       setAddresses(userAddresses);
 
@@ -1674,18 +1674,18 @@ const Checkout = () => {
         userAddresses.find((a) => a.isDefault) || userAddresses[0];
       if (defaultAddr) setSelectedAddress(defaultAddr._id);
     } catch (err) {
-      console.error('Error fetching addresses:', err);
-      toast.error('Failed to load addresses');
+      console.error("Error fetching addresses:", err);
+      toast.error("Failed to load addresses");
     }
   }, []);
 
   useEffect(() => {
     if (!user) {
-      navigate('/login', { state: { from: { pathname: '/checkout' } } });
+      navigate("/login", { state: { from: { pathname: "/checkout" } } });
       return;
     }
     if (!cartItems || cartItems.length === 0) {
-      navigate('/cart');
+      navigate("/cart");
       return;
     }
 
@@ -1700,22 +1700,22 @@ const Checkout = () => {
     e.preventDefault();
     try {
       setLoading(true);
-      await api.post('/users/address', newAddress);
-      toast.success('Address added');
+      await api.post("/users/address", newAddress);
+      toast.success("Address added");
       setShowAddressForm(false);
       setNewAddress({
-        type: 'home',
-        addressLine1: '',
-        addressLine2: '',
-        city: '',
-        state: '',
-        zipCode: '',
-        country: 'India',
+        type: "home",
+        addressLine1: "",
+        addressLine2: "",
+        city: "",
+        state: "",
+        zipCode: "",
+        country: "India",
       });
       await fetchAddresses();
     } catch (err) {
-      console.error('Add address error:', err);
-      toast.error(err.response?.data?.message || 'Failed to add address');
+      console.error("Add address error:", err);
+      toast.error(err.response?.data?.message || "Failed to add address");
     } finally {
       setLoading(false);
     }
@@ -1726,19 +1726,19 @@ const Checkout = () => {
     const pincode = newAddress.zipCode.trim();
 
     if (!pincode) {
-      setPinError('');
+      setPinError("");
       return;
     }
 
     if (pincode.length !== 6 || !/^\d{6}$/.test(pincode)) {
-      setPinError('Enter a valid 6-digit PIN code');
+      setPinError("Enter a valid 6-digit PIN code");
       return;
     }
 
     const fetchPinDetails = async () => {
       try {
         setPinLoading(true);
-        setPinError('');
+        setPinError("");
 
         const res = await fetch(
           `https://api.postalpincode.in/pincode/${pincode}`
@@ -1746,8 +1746,8 @@ const Checkout = () => {
         const data = await res.json();
 
         const entry = data?.[0];
-        if (!entry || entry.Status !== 'Success' || !entry.PostOffice?.length) {
-          setPinError('PIN code not found. Please check and try again.');
+        if (!entry || entry.Status !== "Success" || !entry.PostOffice?.length) {
+          setPinError("PIN code not found. Please check and try again.");
           return;
         }
 
@@ -1757,13 +1757,13 @@ const Checkout = () => {
           ...prev,
           city: po.District || prev.city,
           state: po.State || prev.state,
-          country: po.Country || prev.country || 'India',
+          country: po.Country || prev.country || "India",
         }));
-        setPinError('');
+        setPinError("");
       } catch (err) {
-        console.error('Pincode lookup error:', err);
+        console.error("Pincode lookup error:", err);
         setPinError(
-          'Unable to fetch location for this PIN. Please fill manually.'
+          "Unable to fetch location for this PIN. Please fill manually."
         );
       } finally {
         setPinLoading(false);
@@ -1774,7 +1774,7 @@ const Checkout = () => {
   }, [newAddress.zipCode]);
 
   const calculateTax = () =>
-    typeof getCartTotal === 'function' ? getCartTotal() * 0.18 : 0;
+    typeof getCartTotal === "function" ? getCartTotal() * 0.18 : 0;
   const calculateShipping = () => (getCartTotal() > 500 ? 0 : 80);
   const calculateTotal = () =>
     getCartTotal() + calculateTax() + calculateShipping();
@@ -1782,7 +1782,7 @@ const Checkout = () => {
   // ---------- Core: place order and redirect to WhatsApp ----------
   const handlePlaceOrder = async () => {
     if (!selectedAddress) {
-      toast.error('Please select a delivery address');
+      toast.error("Please select a delivery address");
       return;
     }
 
@@ -1791,7 +1791,7 @@ const Checkout = () => {
     try {
       const selectedAddr = addresses.find((a) => a._id === selectedAddress);
       if (!selectedAddr) {
-        toast.error('Selected address not found');
+        toast.error("Selected address not found");
         setLoading(false);
         return;
       }
@@ -1800,7 +1800,7 @@ const Checkout = () => {
         items: cartItems.map((item) => ({
           product: item.product._id,
           name: item.product.name,
-          image: item.product.images?.[0]?.url || '',
+          image: item.product.images?.[0]?.url || "",
           quantity: item.quantity,
           price: item.product.price,
           discountPrice: item.product.discountPrice,
@@ -1814,7 +1814,7 @@ const Checkout = () => {
           state: selectedAddr.state,
           zipCode: selectedAddr.zipCode,
           country: selectedAddr.country,
-          mobile: user.mobile || '',
+          mobile: user.mobile || "",
         },
         billingAddress: {
           firstName: user.firstName,
@@ -1825,86 +1825,97 @@ const Checkout = () => {
           state: selectedAddr.state,
           zipCode: selectedAddr.zipCode,
           country: selectedAddr.country,
-          mobile: user.mobile || '',
+          mobile: user.mobile || "",
         },
         itemsPrice: getCartTotal(),
         taxPrice: calculateTax(),
         shippingPrice: calculateShipping(),
         totalPrice: calculateTotal(),
-        paymentMethod: 'whatsapp', // 👈 important
-        currency: 'INR',
+        paymentMethod: "whatsapp", // 👈 important
+        currency: "INR",
         customer: {
           customer_id: user._id,
           customer_email: user.email,
-          customer_phone: user.mobile || '',
+          customer_phone: user.mobile || "",
         },
       };
 
-      const res = await api.post('/payments/create-order', payload);
+      const res = await api.post("/payments/create-order", payload);
       const order = res.data.order || res.data;
 
       // Clear cart on frontend
       clearCart();
 
       // Build WhatsApp message
-      const itemsText = cartItems
-        .map((item) => {
-          const price = item.product.discountPrice || item.product.price;
-          return `• ${item.product.name} x ${item.quantity} = ₹${
-            price * item.quantity
-          }`;
-        })
-        .join('\n');
+// Build WhatsApp message (nicer formatting)
+const itemsText = cartItems
+  .map((item) => {
+    const price = item.product.discountPrice || item.product.price;
+    const lineTotal = price * item.quantity;
 
-      const message = `
-Hello, I have placed a new order via the website.
+    return `• *${item.product.name}*  x ${item.quantity}  –  ₹${lineTotal.toLocaleString()}`;
+  })
+  .join("\n");
 
-Order ID: ${order._id}
-Name: ${user.firstName} ${user.lastName}
-Mobile: ${user.mobile || '-'}
+const subtotal = getCartTotal();
+const tax = calculateTax();
+const shipping = calculateShipping();
+const total = calculateTotal();
 
-Items:
-${itemsText}
+const message = [
+  "🛒 *New Order from Website*",
+  "",
+  `*Order ID:* ${order._id}`,
+  `*Name:* ${user.firstName} ${user.lastName}`,
+  user.mobile ? `*Mobile:* ${user.mobile}` : "",
+  user.email ? `*Email:* ${user.email}` : "",
+  "",
+  "📍 *Shipping address*",
+  `${selectedAddr.addressLine1}`,
+  selectedAddr.addressLine2 ? selectedAddr.addressLine2 : "",
+  `${selectedAddr.city}, ${selectedAddr.state} - ${selectedAddr.zipCode}`,
+  `${selectedAddr.country}`,
+  "",
+  "📦 *Items*",
+  itemsText,
+  "",
+  "💰 *Payment summary*",
+  `• Subtotal: ₹${subtotal.toLocaleString()}`,
+  `• Tax (18% GST): ₹${tax.toLocaleString()}`,
+  `• Shipping: ${
+    shipping === 0 ? "FREE" : `₹${shipping.toLocaleString()}`
+  }`,
+  `————————————`,
+  `*Total payable: ₹${total.toLocaleString()}*`,
+  "",
+  "✅ Please confirm *payment options* and *delivery details* here on WhatsApp.",
+].filter(Boolean) // remove empty lines like missing email/mobile
+ .join("\n");
 
-Subtotal: ₹${getCartTotal().toLocaleString()}
-Tax (18%): ₹${calculateTax().toLocaleString()}
-Shipping: ${
-        calculateShipping() === 0
-          ? 'FREE'
-          : `₹${calculateShipping().toLocaleString()}`
-      }
-Total: ₹${calculateTotal().toLocaleString()}
+const waUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(
+  message
+)}`;
 
-Please confirm payment options and delivery details.
-      `.trim();
+window.open(waUrl, "_blank", "noopener,noreferrer");
 
-      const waUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(
-        message
-      )}`;
 
-      // Open WhatsApp chat (mobile app or WhatsApp Web)
-      window.open(waUrl, '_blank', 'noopener,noreferrer');
-
-      toast.success('Order created. Continue in WhatsApp to confirm payment.');
+      toast.success("Order created. Continue in WhatsApp to confirm payment.");
       setLoading(false);
 
       // Optionally navigate to order details page
       navigate(`/orders/${order._id}`);
     } catch (err) {
-      console.error('Place order error:', err);
+      console.error("Place order error:", err);
       const msg =
-        err?.response?.data?.message ||
-        err?.message ||
-        'Failed to place order';
+        err?.response?.data?.message || err?.message || "Failed to place order";
       toast.error(msg);
       setLoading(false);
     }
   };
 
   const getAddressIcon = (type) => {
-    if (type === 'home')
-      return <Home size={18} className="text-slate-900" />;
-    if (type === 'work')
+    if (type === "home") return <Home size={18} className="text-slate-900" />;
+    if (type === "work")
       return <Briefcase size={18} className="text-sky-600" />;
     return <Building2 size={18} className="text-violet-600" />;
   };
@@ -1970,7 +1981,7 @@ Please confirm payment options and delivery details.
                   onClick={() => setShowAddressForm(!showAddressForm)}
                   className="inline-flex items-center justify-center rounded-full bg-slate-900 px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-black"
                 >
-                  {showAddressForm ? 'Cancel' : 'Add new address'}
+                  {showAddressForm ? "Cancel" : "Add new address"}
                 </button>
               </div>
 
@@ -1985,7 +1996,7 @@ Please confirm payment options and delivery details.
                       Address type
                     </label>
                     <div className="col-span-2 flex flex-wrap gap-2">
-                      {['home', 'work', 'other'].map((type) => (
+                      {["home", "work", "other"].map((type) => (
                         <button
                           key={type}
                           type="button"
@@ -1994,17 +2005,17 @@ Please confirm payment options and delivery details.
                           }
                           className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-medium capitalize transition ${
                             newAddress.type === type
-                              ? 'bg-slate-900 text-white shadow-sm'
-                              : 'bg-white text-slate-700 border border-slate-200 hover:border-slate-400'
+                              ? "bg-slate-900 text-white shadow-sm"
+                              : "bg-white text-slate-700 border border-slate-200 hover:border-slate-400"
                           }`}
                         >
                           {getAddressIcon(type)}
                           <span className="hidden sm:inline">
-                            {type === 'home'
-                              ? 'Home'
-                              : type === 'work'
-                              ? 'Work'
-                              : 'Other'}
+                            {type === "home"
+                              ? "Home"
+                              : type === "work"
+                              ? "Work"
+                              : "Other"}
                           </span>
                         </button>
                       ))}
@@ -2149,8 +2160,8 @@ Please confirm payment options and delivery details.
                       key={address._id}
                       className={`flex cursor-pointer items-start gap-3 rounded-2xl border-2 bg-white p-3 transition-all sm:p-4 ${
                         selectedAddress === address._id
-                          ? 'border-slate-900 bg-slate-900/5 shadow-sm'
-                          : 'border-slate-200 hover:border-slate-400 hover:bg-slate-50'
+                          ? "border-slate-900 bg-slate-900/5 shadow-sm"
+                          : "border-slate-200 hover:border-slate-400 hover:bg-slate-50"
                       }`}
                     >
                       <input
@@ -2177,11 +2188,11 @@ Please confirm payment options and delivery details.
                         <div className="text-xs text-slate-600">
                           <p className="line-clamp-2">
                             {address.addressLine1}
-                            {address.addressLine2 && `, ${address.addressLine2}`}
+                            {address.addressLine2 &&
+                              `, ${address.addressLine2}`}
                           </p>
                           <p>
-                            {address.city}, {address.state} -{' '}
-                            {address.zipCode}
+                            {address.city}, {address.state} - {address.zipCode}
                           </p>
                           <p>{address.country}</p>
                         </div>
@@ -2270,7 +2281,7 @@ Please confirm payment options and delivery details.
                           <img
                             src={
                               item.product.images?.[0]?.url ||
-                              '/placeholder.png'
+                              "/placeholder.png"
                             }
                             alt={item.product.name}
                             className="h-12 w-12 rounded-lg border border-slate-200 object-contain bg-white"
@@ -2339,10 +2350,10 @@ Please confirm payment options and delivery details.
                     className="w-full rounded-full bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white shadow-md hover:bg-black disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {loading
-                      ? 'Creating order...'
+                      ? "Creating order..."
                       : selectedAddress
-                      ? 'Place order & continue on WhatsApp'
-                      : 'Select an address to continue'}
+                      ? "Place order & continue on WhatsApp"
+                      : "Select an address to continue"}
                   </button>
 
                   <div className="mt-3 flex items-center gap-2 text-[11px] text-slate-500">
@@ -2357,7 +2368,7 @@ Please confirm payment options and delivery details.
             </div>
           </div>
         </div>
-      </div> 
+      </div>
     </div>
   );
 };
