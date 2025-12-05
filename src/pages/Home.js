@@ -235,7 +235,7 @@ import { Link } from 'react-router-dom';
 import api from '../utils/api';
 import ProductCard from '../components/ProductCard';
 import newImage from '../assets/newimg.webp';
-import { Truck, Shield, Leaf, CheckCircle2, ArrowRight, Sparkles } from 'lucide-react';
+import { Truck, Shield, Leaf, CheckCircle2, ArrowRight, Sparkles, Award } from 'lucide-react';
 
 const Home = () => {
   const [featuredProducts, setFeaturedProducts] = useState([]);
@@ -289,17 +289,66 @@ const Home = () => {
 
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 w-full z-10">
           <div className="max-w-3xl">
-            {/* Animated Badge */}
+            {/* Premium Animated Badge - HIGHLIGHTED */}
             <div 
-              className={`inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-md border border-white/20 mb-6 transform transition-all duration-700 ${
+              className={`inline-block mb-6 transform transition-all duration-700 ${
                 isHeroVisible ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'
               }`}
             >
-              <Sparkles className="w-4 h-4 text-amber-400 animate-pulse" />
-              <span className="text-xs font-bold tracking-[0.2em] text-amber-300 uppercase">
-                Vemapri • Gudipati Products
-              </span>
+              <div className="relative group">
+                {/* Glow effect behind badge */}
+                <div className="absolute inset-0 bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 rounded-full blur-xl opacity-60 group-hover:opacity-80 animate-pulse transition-opacity" />
+                
+                {/* Main badge */}
+                <div className="relative flex items-center gap-3 px-6 py-3 rounded-full bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 border-2 border-amber-300/50 shadow-2xl shadow-amber-500/50 backdrop-blur-sm">
+                  <Award className="w-5 h-5 text-slate-900 animate-pulse" />
+                  
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-bold text-slate-900">
+                      Vemapri
+                    </span>
+                    <span className="text-slate-800 font-medium">•</span>
+                    <span className="text-sm font-extrabold text-slate-900 tracking-wide animate-shimmer bg-gradient-to-r from-slate-900 via-slate-700 to-slate-900 bg-clip-text text-transparent bg-[length:200%_100%]">
+                      GUDIPATI PRODUCTS
+                    </span>
+                  </div>
+                  
+                  <Sparkles className="w-4 h-4 text-slate-900 animate-spin-slow" />
+                </div>
+
+                {/* Decorative corner accents */}
+                <div className="absolute -top-1 -left-1 w-3 h-3 border-t-2 border-l-2 border-white/40 rounded-tl-lg" />
+                <div className="absolute -bottom-1 -right-1 w-3 h-3 border-b-2 border-r-2 border-white/40 rounded-br-lg" />
+              </div>
             </div>
+
+            {/* Alternative: Even More Prominent Version */}
+            {/* <div 
+              className={`mb-8 transform transition-all duration-700 ${
+                isHeroVisible ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'
+              }`}
+            >
+              <div className="relative inline-block">
+                <div className="absolute inset-0 bg-gradient-to-r from-amber-500 to-amber-600 rounded-2xl blur-2xl opacity-50 animate-pulse" />
+                
+                <div className="relative bg-gradient-to-br from-amber-400 via-amber-500 to-amber-600 p-1 rounded-2xl shadow-2xl">
+                  <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-xl px-8 py-5">
+                    <div className="flex items-center gap-3">
+                      <Award className="w-6 h-6 text-amber-400 animate-pulse" />
+                      <div>
+                        <div className="text-[10px] font-bold tracking-[0.3em] text-amber-400 uppercase mb-1">
+                          Vemapri Presents
+                        </div>
+                        <div className="text-2xl font-black bg-gradient-to-r from-amber-300 via-amber-200 to-amber-300 bg-clip-text text-transparent animate-shimmer bg-[length:200%_100%]">
+                          GUDIPATI PRODUCTS
+                        </div>
+                      </div>
+                      <Sparkles className="w-5 h-5 text-amber-400 animate-spin-slow" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div> */}
 
             {/* Animated Main Heading */}
             <h1 
@@ -307,7 +356,7 @@ const Home = () => {
                 isHeroVisible ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'
               }`}
             >
-              <span className="block bg-gradient-to-r from-white via-amber-100 to-white bg-clip-text text-transparent animate-shimmer">
+              <span className="block bg-gradient-to-r from-white via-amber-100 to-white bg-clip-text text-transparent animate-shimmer bg-[length:200%_100%]">
                 Natural spices
               </span>
               <span className="block mt-2">
@@ -385,7 +434,8 @@ const Home = () => {
         </div>
       </section>
 
-      {/* WHAT WE OFFER - Enhanced */}
+      {/* Rest of your sections remain the same... */}
+      {/* WHAT WE OFFER */}
       <section className="py-16 border-b border-slate-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
@@ -438,7 +488,6 @@ const Home = () => {
                   {item.desc}
                 </p>
                 
-                {/* Hover Gradient Accent */}
                 <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-amber-400/0 to-amber-600/0 group-hover:from-amber-400/5 group-hover:to-amber-600/5 transition-all duration-500 pointer-events-none" />
               </div>
             ))}
@@ -446,7 +495,7 @@ const Home = () => {
         </div>
       </section>
 
-      {/* WHY CHOOSE US - Enhanced */}
+      {/* WHY CHOOSE US */}
       <section className="py-16 bg-gradient-to-b from-white to-slate-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
@@ -489,7 +538,7 @@ const Home = () => {
                   animation: `scaleIn 0.6s ease-out ${index * 0.15}s both`
                 }}
               >
-                <div className={`mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-${item.color}-50 to-${item.color}-100 shadow-lg shadow-${item.color}-500/20 group-hover:shadow-xl group-hover:shadow-${item.color}-500/30 group-hover:scale-110 transition-all duration-300`}>
+                <div className={`mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-${item.color}-50 to-${item.color}-100 shadow-lg group-hover:shadow-xl group-hover:scale-110 transition-all duration-300`}>
                   <item.icon className={`h-8 w-8 text-${item.color}-600`} />
                 </div>
                 <h3 className="text-xl font-bold text-slate-900 mb-3">
@@ -499,7 +548,6 @@ const Home = () => {
                   {item.desc}
                 </p>
 
-                {/* Decorative corner */}
                 <div className="absolute top-4 right-4 w-8 h-8 border-t-2 border-r-2 border-amber-400/20 rounded-tr-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
               </div>
             ))}
@@ -523,7 +571,7 @@ const Home = () => {
         </div>
       </section>
 
-      {/* FEATURED PRODUCTS - Enhanced */}
+      {/* FEATURED PRODUCTS */}
       <section className="py-20 bg-slate-50 border-t border-slate-200">
         <div className="max-w-[96rem] mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-10 gap-4">
@@ -577,7 +625,7 @@ const Home = () => {
         </div>
       </section>
 
-      {/* Add these animations to your CSS */}
+      {/* Animations CSS */}
       <style jsx>{`
         @keyframes fadeIn {
           from { opacity: 0; }
@@ -645,7 +693,6 @@ const Home = () => {
         }
 
         .animate-shimmer {
-          background-size: 200% 200%;
           animation: shimmer 3s ease-in-out infinite;
         }
 
@@ -655,6 +702,19 @@ const Home = () => {
 
         .animate-scroll {
           animation: scroll 2s ease-in-out infinite;
+        }
+
+        .animate-spin-slow {
+          animation: spin 8s linear infinite;
+        }
+
+        @keyframes spin {
+          from {
+            transform: rotate(0deg);
+          }
+          to {
+            transform: rotate(360deg);
+          }
         }
       `}</style>
     </div>
