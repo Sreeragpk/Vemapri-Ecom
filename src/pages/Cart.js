@@ -250,7 +250,11 @@ const Cart = () => {
 
   const [stockErrors, setStockErrors] = useState({});
 
-  // Check stock for items in cart
+  // helper key for product + variant
+  const getItemKey = (item) =>
+    `${item.product._id}_${item.variantId || 'noVar'}`;
+
+  // Check stock for items in cart (variant-aware)
   useEffect(() => {
     const checkStock = async () => {
       const errors = {};
@@ -260,9 +264,23 @@ const Cart = () => {
           const res = await api.get(`/products/${item.product._id}`);
           const product = res.data;
 
-          if (product.stock < item.quantity) {
-            errors[item.product._id] = {
-              available: product.stock,
+          let available = 0;
+
+          if (item.variantId && product.variants && product.variants.length) {
+            const v = product.variants.find(
+              (vv) =>
+                vv._id === item.variantId ||
+                vv._id?.toString() === item.variantId?.toString()
+            );
+            available = v?.stock ?? 0;
+          } else {
+            // fallback for old/non-variant products
+            available = product.stock ?? 0;
+          }
+
+          if (available < item.quantity) {
+            errors[getItemKey(item)] = {
+              available,
               requested: item.quantity,
             };
           }
@@ -393,16 +411,47 @@ const Cart = () => {
 
               <div className="divide-y divide-slate-100">
                 {cartItems.map((item) => {
+                  const key = getItemKey(item);
+
+                  // price from variant if available
+                  const variantPrice =
+                    item.variant &&
+                    (item.variant.discountPrice != null
+                      ? item.variant.discountPrice
+                      : item.variant.price);
+
+                  const productPrice =
+                    item.product.discountPrice != null
+                      ? item.product.discountPrice
+                      : item.product.price;
+
                   const price =
-                    item.product.discountPrice || item.product.price;
+                    variantPrice != null ? variantPrice : productPrice || 0;
+
                   const subtotal = price * item.quantity;
-                  const hasError = stockErrors[item.product._id];
-                  const isMaxQty = item.quantity >= item.product.stock;
+
+                  const hasError = stockErrors[key];
+
+                  // local stock hint for +/- buttons (fallback from cart data)
+                  const localStock =
+                    (item.variant && item.variant.stock) ||
+                    item.product.stock ||
+                    Infinity;
+
+                  const isMaxQty =
+                    Number.isFinite(localStock) &&
+                    item.quantity >= localStock;
                   const isMinQty = item.quantity <= 1;
+
+                  const variantLabel =
+                    item.variant?.displayQuantity ||
+                    (item.variant?.quantity && item.variant?.unit
+                      ? `${item.variant.quantity} ${item.variant.unit}`
+                      : null);
 
                   return (
                     <div
-                      key={item.product._id}
+                      key={key}
                       className="flex flex-col gap-4 px-4 py-4 sm:px-6 sm:py-5 md:flex-row md:items-center"
                     >
                       {/* Product Image */}
@@ -413,6 +462,7 @@ const Cart = () => {
                         <div className="h-24 w-24 rounded-xl border border-slate-200 bg-white flex items-center justify-center overflow-hidden">
                           <img
                             src={
+                              item.variant?.images?.[0]?.url ||
                               item.product.images?.[0]?.url ||
                               '/placeholder.png'
                             }
@@ -429,6 +479,11 @@ const Cart = () => {
                           className="text-sm sm:text-base font-semibold text-slate-900 hover:text-slate-700 line-clamp-2 transition-colors"
                         >
                           {item.product.name}
+                          {variantLabel && (
+                            <span className="ml-1 text-xs text-slate-500">
+                              ({variantLabel})
+                            </span>
+                          )}
                         </Link>
                         <p className="mt-1 text-xs text-slate-500">
                           {item.product.category}
@@ -438,21 +493,42 @@ const Cart = () => {
                           <span className="text-base font-bold text-slate-900">
                             ₹{price.toLocaleString()}
                           </span>
-                          {item.product.discountPrice && (
-                            <>
-                              <span className="text-xs text-slate-400 line-through">
-                                ₹{item.product.price.toLocaleString()}
-                              </span>
-                              <span className="inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700 border border-amber-100">
-                                <Tag size={12} className="mr-1" />
-                                Save ₹
-                                {(
-                                  item.product.price -
-                                  item.product.discountPrice
-                                ).toLocaleString()}
-                              </span>
-                            </>
-                          )}
+
+                          {/* Show strike-through only if we know original price and discount applied */}
+                          {variantPrice != null &&
+                            item.variant &&
+                            item.variant.discountPrice != null && (
+                              <>
+                                <span className="text-xs text-slate-400 line-through">
+                                  ₹{item.variant.price.toLocaleString()}
+                                </span>
+                                <span className="inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700 border border-amber-100">
+                                  <Tag size={12} className="mr-1" />
+                                  Save ₹
+                                  {(
+                                    item.variant.price -
+                                    item.variant.discountPrice
+                                  ).toLocaleString()}
+                                </span>
+                              </>
+                            )}
+
+                          {variantPrice == null &&
+                            item.product.discountPrice != null && (
+                              <>
+                                <span className="text-xs text-slate-400 line-through">
+                                  ₹{item.product.price.toLocaleString()}
+                                </span>
+                                <span className="inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700 border border-amber-100">
+                                  <Tag size={12} className="mr-1" />
+                                  Save ₹
+                                  {(
+                                    item.product.price -
+                                    item.product.discountPrice
+                                  ).toLocaleString()}
+                                </span>
+                              </>
+                            )}
                         </div>
 
                         {/* Stock warning per item */}
@@ -480,7 +556,8 @@ const Cart = () => {
                             onClick={() =>
                               updateQuantity(
                                 item.product._id,
-                                item.quantity - 1
+                                item.quantity - 1,
+                                item.variantId
                               )
                             }
                             disabled={isMinQty}
@@ -495,7 +572,8 @@ const Cart = () => {
                             onClick={() =>
                               updateQuantity(
                                 item.product._id,
-                                item.quantity + 1
+                                item.quantity + 1,
+                                item.variantId
                               )
                             }
                             disabled={isMaxQty}
@@ -515,7 +593,9 @@ const Cart = () => {
 
                         {/* Remove Button */}
                         <button
-                          onClick={() => removeFromCart(item.product._id)}
+                          onClick={() =>
+                            removeFromCart(item.product._id, item.variantId)
+                          }
                           className="inline-flex items-center gap-1 text-xs font-medium text-slate-400 hover:text-rose-500 transition-colors"
                         >
                           <Trash2 size={14} />

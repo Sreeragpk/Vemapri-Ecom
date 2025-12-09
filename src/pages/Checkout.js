@@ -1619,6 +1619,10 @@
 // };
 
 // export default Checkout;
+
+
+// src/pages/Checkout.jsx
+// src/pages/Checkout.jsx
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useCart } from "../context/CartContext";
@@ -1634,17 +1638,20 @@ import {
   ShieldCheck,
   Truck,
   AlertCircle,
+  X,
 } from "lucide-react";
 
 const Checkout = () => {
   const navigate = useNavigate();
+  const { cartItems, clearCart, updateQuantity, removeFromCart } = useCart();
   const { user } = useAuth();
-  const { cartItems, getCartTotal, clearCart } = useCart();
 
   const [addresses, setAddresses] = useState([]);
   const [selectedAddress, setSelectedAddress] = useState(null);
   const [loading, setLoading] = useState(false);
   const [showAddressForm, setShowAddressForm] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+
   const [newAddress, setNewAddress] = useState({
     type: "home",
     addressLine1: "",
@@ -1659,17 +1666,16 @@ const Checkout = () => {
   const [pinLoading, setPinLoading] = useState(false);
   const [pinError, setPinError] = useState("");
 
-  // 🔢 Your WhatsApp business number (country code + number, no + sign)
-  // Example: '919876543210'
-  const WHATSAPP_NUMBER = "917204929407";
+  // WhatsApp number (env override)
+  const WHATSAPP_NUMBER =
+    process.env.REACT_APP_WHATSAPP_NUMBER || "917204929407";
 
-  // fetchAddresses is used in useEffect and after add address
+  // Fetch addresses
   const fetchAddresses = useCallback(async () => {
     try {
       const res = await api.get("/users/profile");
       const userAddresses = res.data.addresses || [];
       setAddresses(userAddresses);
-
       const defaultAddr =
         userAddresses.find((a) => a.isDefault) || userAddresses[0];
       if (defaultAddr) setSelectedAddress(defaultAddr._id);
@@ -1688,7 +1694,6 @@ const Checkout = () => {
       navigate("/cart");
       return;
     }
-
     fetchAddresses();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, cartItems]);
@@ -1721,38 +1726,31 @@ const Checkout = () => {
     }
   };
 
-  // ===== Auto-fill City / State / Country from PIN code =====
+  // Auto-fill city/state from PIN
   useEffect(() => {
-    const pincode = newAddress.zipCode.trim();
-
+    const pincode = (newAddress.zipCode || "").trim();
     if (!pincode) {
       setPinError("");
       return;
     }
-
     if (pincode.length !== 6 || !/^\d{6}$/.test(pincode)) {
       setPinError("Enter a valid 6-digit PIN code");
       return;
     }
-
     const fetchPinDetails = async () => {
       try {
         setPinLoading(true);
         setPinError("");
-
         const res = await fetch(
           `https://api.postalpincode.in/pincode/${pincode}`
         );
         const data = await res.json();
-
         const entry = data?.[0];
         if (!entry || entry.Status !== "Success" || !entry.PostOffice?.length) {
           setPinError("PIN code not found. Please check and try again.");
           return;
         }
-
         const po = entry.PostOffice[0];
-
         setNewAddress((prev) => ({
           ...prev,
           city: po.District || prev.city,
@@ -1762,30 +1760,212 @@ const Checkout = () => {
         setPinError("");
       } catch (err) {
         console.error("Pincode lookup error:", err);
-        setPinError(
-          "Unable to fetch location for this PIN. Please fill manually."
-        );
+        setPinError("Unable to fetch location for this PIN. Please fill manually.");
       } finally {
         setPinLoading(false);
       }
     };
-
     fetchPinDetails();
   }, [newAddress.zipCode]);
 
-  const calculateTax = () =>
-    typeof getCartTotal === "function" ? getCartTotal() * 0.18 : 0;
-  const calculateShipping = () => (getCartTotal() > 500 ? 0 : 80);
-  const calculateTotal = () =>
-    getCartTotal() + calculateTax() + calculateShipping();
+  // ---------- Small helpers to tolerate minimal cart snapshots ----------
+  const toId = (p) => p && (p._id || p.id || p);
+  const safeNumber = (v) => {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : undefined;
+  };
+  const getProductName = (p) => (p && (p.name || p.title)) || String(toId(p) || "");
+  const getProductImage = (p) => (p && p.images && p.images[0]?.url) || "/placeholder.png";
 
-  // ---------- Core: place order and redirect to WhatsApp ----------
+  // ---------- Variant-aware helpers ----------
+  const getUnitPriceForItem = (item) => {
+    // item: { product, variant, quantity } but product may be id-only if snapshot
+    const variant = item.variant || null;
+    if (variant) {
+      const vDiscount = variant.discountPrice ?? (variant.discountPrice === 0 ? 0 : null);
+      if (vDiscount != null && vDiscount !== "") return Number(vDiscount);
+      if (variant.price != null && variant.price !== "") return Number(variant.price);
+    }
+    const prod = item.product || {};
+    const pDiscount = prod.discountPrice ?? (prod.discountPrice === 0 ? 0 : null);
+    if (pDiscount != null && pDiscount !== "") return Number(pDiscount);
+    if (prod.price != null && prod.price !== "") return Number(prod.price);
+    // fallback to 0
+    return 0;
+  };
+
+  // const getStockForItem = (item) => {
+  //   const variant = item.variant || null;
+  //   if (variant && safeNumber(variant.stock) !== undefined) return Number(variant.stock);
+  //   if (item.product && safeNumber(item.product.stock) !== undefined) return Number(item.product.stock);
+  //   return Infinity;
+  // };
+
+  const localSubtotal = cartItems.reduce((acc, it) => {
+    const unit = getUnitPriceForItem(it);
+    const qty = Number(it.quantity) || 0;
+    return acc + unit * qty;
+  }, 0);
+
+  const calculateTax = () => Number((localSubtotal * 0.18).toFixed(2));
+  const calculateShipping = () => (localSubtotal > 500 ? 0 : 80);
+  const calculateTotal = () => Number((localSubtotal + calculateTax() + calculateShipping()).toFixed(2));
+
+  // ---------- Server-backed validation helpers ----------
+  // Attempt to validate via a server endpoint (best), else fallback to local-per-product fetch
+  const validateStockWithServer = async () => {
+    if (!cartItems || cartItems.length === 0) return { ok: true };
+
+    // Build a simple items shape for server validation
+    const itemsForServer = cartItems.map((it) => ({
+      product: toId(it.product),
+      variantId: it.variantId || null,
+      quantity: Number(it.quantity) || 0,
+      sku: it.variant?.sku || it.product?.sku || null,
+    }));
+
+    // First try: call POST /cart/validate (preferred - single call)
+    try {
+      const res = await api.post("/cart/validate", { items: itemsForServer });
+      if (res.data && res.data.ok) return { ok: true };
+      if (res.data && res.data.shortages) {
+        return { ok: false, shortages: res.data.shortages };
+      }
+    } catch (err) {
+      if (err?.response?.data?.shortages) {
+        return { ok: false, shortages: err.response.data.shortages };
+      }
+      console.warn("/cart/validate not available or failed, falling back to per-product fetch", err?.message);
+    }
+
+    // Fallback: fetch each distinct product and validate variants locally against fresh data
+    try {
+      const uniqueIds = [...new Set(itemsForServer.map((i) => String(i.product)))];
+      const fetches = uniqueIds.map((pid) =>
+        api.get(`/products/${pid}`).then((r) => r.data).catch((e) => {
+          console.error(`Failed to fetch product ${pid}`, e);
+          return null;
+        })
+      );
+      const productsLatest = await Promise.all(fetches);
+      const latestMap = {};
+      productsLatest.forEach((p) => {
+        if (p && p._id) latestMap[p._id] = p;
+      });
+
+      const shortages = [];
+      for (const it of itemsForServer) {
+        const latest = latestMap[it.product];
+        if (!latest) {
+          shortages.push({ product: it.product, variantId: it.variantId || null, available: 0, message: "Product not found" });
+          continue;
+        }
+
+        if (it.variantId) {
+          const match = Array.isArray(latest.variants) ? latest.variants.find(v => String(v._id) === String(it.variantId) || String(v.id) === String(it.variantId)) : null;
+          if (match) {
+            if (safeNumber(match.stock) !== undefined && it.quantity > Number(match.stock)) {
+              shortages.push({ product: it.product, variantId: it.variantId, available: Number(match.stock), message: `Only ${Number(match.stock)} available` });
+            }
+          } else {
+            // variant missing -> check product stock
+            if (safeNumber(latest.stock) !== undefined && it.quantity > Number(latest.stock)) {
+              shortages.push({ product: it.product, variantId: null, available: Number(latest.stock), message: `Only ${Number(latest.stock)} available` });
+            }
+          }
+        } else {
+          // no variant -> use product stock
+          if (safeNumber(latest.stock) !== undefined && it.quantity > Number(latest.stock)) {
+            shortages.push({ product: it.product, variantId: null, available: Number(latest.stock), message: `Only ${Number(latest.stock)} available` });
+          }
+        }
+      }
+
+      if (shortages.length > 0) return { ok: false, shortages };
+      return { ok: true };
+    } catch (err) {
+      console.error("validateStockWithServer fallback failed", err);
+      return { ok: false, message: "Unable to validate stock. Please try again." };
+    }
+  };
+
+  // helper: sync cart with server shortages by reducing quantities or removing items
+  const syncCartWithShortages = async (shortages = []) => {
+    // shortages: [{ product, variantId, available, message }]
+    // We'll iterate cartItems and apply adjustments using updateQuantity/removeFromCart
+    let modified = false;
+    for (const s of shortages) {
+      for (const item of cartItems.slice()) {
+        const pid = toId(item.product);
+        const matchesProduct = String(pid) === String(s.product);
+        if (!matchesProduct) continue;
+
+        // match variant semantics
+        const matchesVariant =
+          (s.variantId == null && (item.variantId == null || item.variantId === "")) ||
+          (s.variantId != null && String(item.variantId) === String(s.variantId));
+
+        if (!matchesVariant) continue;
+
+        const available = typeof s.available === "number" ? Number(s.available) : 0;
+        // Friendly product label
+        const label = `${getProductName(item.product)}${item.variant?.displayQuantity ? ` (${item.variant.displayQuantity})` : ""}`;
+
+        if (available <= 0) {
+          removeFromCart(pid, item.variantId || null);
+          modified = true;
+          toast.error(`Removed "${label}" — out of stock.`);
+        } else if (Number(item.quantity) > available) {
+          updateQuantity(pid, available, item.variantId || null);
+          modified = true;
+          toast.error(`Reduced "${label}" to ${available} due to stock changes.`);
+        }
+      }
+    }
+
+    if (modified) {
+      // send user back to cart so they can re-check and continue
+      navigate("/cart");
+    }
+    return modified;
+  };
+
+  // Stage 1: open confirmation modal (validate first)
   const handlePlaceOrder = async () => {
     if (!selectedAddress) {
       toast.error("Please select a delivery address");
       return;
     }
 
+    setLoading(true);
+    try {
+      const validation = await validateStockWithServer();
+      if (!validation.ok) {
+        // Prefer structured shortages info if present
+        if (validation.shortages && validation.shortages.length > 0) {
+          await syncCartWithShortages(validation.shortages);
+          setLoading(false);
+          return;
+        }
+        // fallback to message
+        toast.error(validation.message || "Insufficient stock for one or more items.");
+        setLoading(false);
+        return;
+      }
+
+      // stock validated, open confirmation modal
+      setConfirmOpen(true);
+    } catch (e) {
+      console.error("handlePlaceOrder error", e);
+      toast.error("Stock check failed. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Stage 2: actually create order and open WhatsApp
+  const placeOrderConfirmed = async () => {
+    setConfirmOpen(false);
     setLoading(true);
 
     try {
@@ -1796,15 +1976,25 @@ const Checkout = () => {
         return;
       }
 
-      const payload = {
-        items: cartItems.map((item) => ({
-          product: item.product._id,
-          name: item.product.name,
-          image: item.product.images?.[0]?.url || "",
+      const itemsPayload = cartItems.map((item) => {
+        const unitPrice = getUnitPriceForItem(item);
+        const lineTotal = unitPrice * Number(item.quantity || 0);
+        return {
+          product: toId(item.product),
+          productName: getProductName(item.product),
+          variantId: item.variantId || null,
+          variantName: item.variant?.name || item.variant?.displayQuantity || null,
+          sku: item.variant?.sku || item.product?.sku || null,
+          image: getProductImage(item.product),
           quantity: item.quantity,
-          price: item.product.price,
-          discountPrice: item.product.discountPrice,
-        })),
+          unitPrice,
+          lineTotal,
+          currency: "INR",
+        };
+      });
+
+      const payload = {
+        items: itemsPayload,
         shippingAddress: {
           firstName: user.firstName,
           lastName: user.lastName,
@@ -1827,11 +2017,11 @@ const Checkout = () => {
           country: selectedAddr.country,
           mobile: user.mobile || "",
         },
-        itemsPrice: getCartTotal(),
+        itemsPrice: localSubtotal,
         taxPrice: calculateTax(),
         shippingPrice: calculateShipping(),
         totalPrice: calculateTotal(),
-        paymentMethod: "whatsapp", // 👈 important
+        paymentMethod: "whatsapp",
         currency: "INR",
         customer: {
           customer_id: user._id,
@@ -1843,80 +2033,80 @@ const Checkout = () => {
       const res = await api.post("/payments/create-order", payload);
       const order = res.data.order || res.data;
 
-      // Clear cart on frontend
+      // After server confirms, clear cart
       clearCart();
 
       // Build WhatsApp message
-// Build WhatsApp message (nicer formatting)
-const itemsText = cartItems
-  .map((item) => {
-    const price = item.product.discountPrice || item.product.price;
-    const lineTotal = price * item.quantity;
+      const itemsText = itemsPayload
+        .map(
+          (it) =>
+            `• *${it.productName}* ${it.variantName ? `(${it.variantName}) ` : ""}x ${it.quantity}  –  ₹${Number(it.lineTotal).toLocaleString()}`
+        )
+        .join("\n");
 
-    return `• *${item.product.name}*  x ${item.quantity}  –  ₹${lineTotal.toLocaleString()}`;
-  })
-  .join("\n");
+      const subtotal = localSubtotal;
+      const tax = calculateTax();
+      const shipping = calculateShipping();
+      const total = calculateTotal();
 
-const subtotal = getCartTotal();
-const tax = calculateTax();
-const shipping = calculateShipping();
-const total = calculateTotal();
+      const message = [
+        "🛒 *New Order from Website*",
+        "",
+        `*Order ID:* ${order._id}`,
+        `*Name:* ${user.firstName} ${user.lastName}`,
+        user.mobile ? `*Mobile:* ${user.mobile}` : "",
+        user.email ? `*Email:* ${user.email}` : "",
+        "",
+        "📍 *Shipping address*",
+        `${selectedAddr.addressLine1}`,
+        selectedAddr.addressLine2 ? selectedAddr.addressLine2 : "",
+        `${selectedAddr.city}, ${selectedAddr.state} - ${selectedAddr.zipCode}`,
+        `${selectedAddr.country}`,
+        "",
+        "📦 *Items*",
+        itemsText,
+        "",
+        "💰 *Payment summary*",
+        `• Subtotal: ₹${Number(subtotal).toLocaleString()}`,
+        `• Tax (18% GST): ₹${Number(tax).toLocaleString()}`,
+        `• Shipping: ${shipping === 0 ? "FREE" : `₹${Number(shipping).toLocaleString()}`}`,
+        `————————————`,
+        `*Total payable: ₹${Number(total).toLocaleString()}*`,
+        "",
+        "✅ Please confirm *payment options* and *delivery details* here on WhatsApp.",
+      ]
+        .filter(Boolean)
+        .join("\n");
 
-const message = [
-  "🛒 *New Order from Website*",
-  "",
-  `*Order ID:* ${order._id}`,
-  `*Name:* ${user.firstName} ${user.lastName}`,
-  user.mobile ? `*Mobile:* ${user.mobile}` : "",
-  user.email ? `*Email:* ${user.email}` : "",
-  "",
-  "📍 *Shipping address*",
-  `${selectedAddr.addressLine1}`,
-  selectedAddr.addressLine2 ? selectedAddr.addressLine2 : "",
-  `${selectedAddr.city}, ${selectedAddr.state} - ${selectedAddr.zipCode}`,
-  `${selectedAddr.country}`,
-  "",
-  "📦 *Items*",
-  itemsText,
-  "",
-  "💰 *Payment summary*",
-  `• Subtotal: ₹${subtotal.toLocaleString()}`,
-  `• Tax (18% GST): ₹${tax.toLocaleString()}`,
-  `• Shipping: ${
-    shipping === 0 ? "FREE" : `₹${shipping.toLocaleString()}`
-  }`,
-  `————————————`,
-  `*Total payable: ₹${total.toLocaleString()}*`,
-  "",
-  "✅ Please confirm *payment options* and *delivery details* here on WhatsApp.",
-].filter(Boolean) // remove empty lines like missing email/mobile
- .join("\n");
-
-const waUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(
-  message
-)}`;
-
-window.open(waUrl, "_blank", "noopener,noreferrer");
-
+      const waUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
+      window.open(waUrl, "_blank", "noopener,noreferrer");
 
       toast.success("Order created. Continue in WhatsApp to confirm payment.");
       setLoading(false);
 
-      // Optionally navigate to order details page
       navigate(`/orders/${order._id}`);
     } catch (err) {
       console.error("Place order error:", err);
-      const msg =
-        err?.response?.data?.message || err?.message || "Failed to place order";
+
+      // If server returns structured shortages, sync cart and inform user
+      const shortages = err?.response?.data?.shortages || err?.response?.data?.details?.shortages;
+      if (shortages && shortages.length > 0) {
+        await syncCartWithShortages(shortages);
+        setLoading(false);
+        return;
+      }
+
+      // Otherwise show server message if available
+      const msg = err?.response?.data?.message || err?.message || "Failed to place order";
       toast.error(msg);
+
       setLoading(false);
     }
   };
 
   const getAddressIcon = (type) => {
     if (type === "home") return <Home size={18} className="text-slate-900" />;
-    if (type === "work")
-      return <Briefcase size={18} className="text-sky-600" />;
+    if (type === "work") return <Briefcase size={18} className="text-sky-600" />;
     return <Building2 size={18} className="text-violet-600" />;
   };
 
@@ -1926,34 +2116,24 @@ window.open(waUrl, "_blank", "noopener,noreferrer");
         {/* Heading + Steps */}
         <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">
-              Checkout
-            </h1>
-            <p className="mt-1 text-sm text-slate-500">
-              Complete your order in a few simple steps.
-            </p>
+            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">Checkout</h1>
+            <p className="mt-1 text-sm text-slate-500">Complete your order in a few simple steps.</p>
           </div>
 
           {/* Step indicator */}
           <div className="flex items-center gap-2 text-xs sm:text-sm font-medium text-slate-500">
             <div className="flex items-center gap-1">
-              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-900 text-[10px] font-bold text-white">
-                1
-              </span>
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-900 text-[10px] font-bold text-white">1</span>
               <span>Cart</span>
             </div>
             <span className="h-px w-6 bg-slate-300" />
             <div className="flex items-center gap-1">
-              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-900 text-[10px] font-bold text-white">
-                2
-              </span>
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-900 text-[10px] font-bold text-white">2</span>
               <span>Address &amp; WhatsApp</span>
             </div>
             <span className="h-px w-6 bg-slate-300" />
             <div className="flex items-center gap-1 opacity-60">
-              <span className="flex h-6 w-6 items-center justify-center rounded-full border border-slate-300 text-[10px] font-bold text-slate-500">
-                3
-              </span>
+              <span className="flex h-6 w-6 items-center justify-center rounded-full border border-slate-300 text-[10px] font-bold text-slate-500">3</span>
               <span>Confirmation</span>
             </div>
           </div>
@@ -1969,12 +2149,8 @@ window.open(waUrl, "_blank", "noopener,noreferrer");
                     <MapPin size={18} />
                   </div>
                   <div>
-                    <h2 className="text-lg font-semibold text-slate-900">
-                      Delivery address
-                    </h2>
-                    <p className="text-xs text-slate-500">
-                      Choose an existing address or add a new one.
-                    </p>
+                    <h2 className="text-lg font-semibold text-slate-900">Delivery address</h2>
+                    <p className="text-xs text-slate-500">Choose an existing address or add a new one.</p>
                   </div>
                 </div>
                 <button
@@ -1987,36 +2163,21 @@ window.open(waUrl, "_blank", "noopener,noreferrer");
 
               {/* Address form */}
               {showAddressForm && (
-                <form
-                  onSubmit={handleAddAddress}
-                  className="mb-6 rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5"
-                >
+                <form onSubmit={handleAddAddress} className="mb-6 rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5">
                   <div className="mb-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
-                    <label className="col-span-1 text-xs font-medium text-slate-700">
-                      Address type
-                    </label>
+                    <label className="col-span-1 text-xs font-medium text-slate-700">Address type</label>
                     <div className="col-span-2 flex flex-wrap gap-2">
                       {["home", "work", "other"].map((type) => (
                         <button
                           key={type}
                           type="button"
-                          onClick={() =>
-                            setNewAddress((prev) => ({ ...prev, type }))
-                          }
+                          onClick={() => setNewAddress((prev) => ({ ...prev, type }))}
                           className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-medium capitalize transition ${
-                            newAddress.type === type
-                              ? "bg-slate-900 text-white shadow-sm"
-                              : "bg-white text-slate-700 border border-slate-200 hover:border-slate-400"
+                            newAddress.type === type ? "bg-slate-900 text-white shadow-sm" : "bg-white text-slate-700 border border-slate-200 hover:border-slate-400"
                           }`}
                         >
                           {getAddressIcon(type)}
-                          <span className="hidden sm:inline">
-                            {type === "home"
-                              ? "Home"
-                              : type === "work"
-                              ? "Work"
-                              : "Other"}
-                          </span>
+                          <span className="hidden sm:inline">{type === "home" ? "Home" : type === "work" ? "Work" : "Other"}</span>
                         </button>
                       ))}
                     </div>
@@ -2024,125 +2185,44 @@ window.open(waUrl, "_blank", "noopener,noreferrer");
 
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div className="sm:col-span-2">
-                      <label className="mb-1 block text-xs font-medium text-slate-700">
-                        Address line 1 *
-                      </label>
-                      <input
-                        type="text"
-                        name="addressLine1"
-                        required
-                        value={newAddress.addressLine1}
-                        onChange={handleAddressChange}
-                        className="input h-10 text-sm"
-                        placeholder="House/Flat No., Building Name"
-                      />
+                      <label className="mb-1 block text-xs font-medium text-slate-700">Address line 1 *</label>
+                      <input type="text" name="addressLine1" required value={newAddress.addressLine1} onChange={handleAddressChange} className="input h-10 text-sm" placeholder="House/Flat No., Building Name" />
                     </div>
 
                     <div className="sm:col-span-2">
-                      <label className="mb-1 block text-xs font-medium text-slate-700">
-                        Address line 2
-                      </label>
-                      <input
-                        type="text"
-                        name="addressLine2"
-                        value={newAddress.addressLine2}
-                        onChange={handleAddressChange}
-                        className="input h-10 text-sm"
-                        placeholder="Road name, area, landmark"
-                      />
+                      <label className="mb-1 block text-xs font-medium text-slate-700">Address line 2</label>
+                      <input type="text" name="addressLine2" value={newAddress.addressLine2} onChange={handleAddressChange} className="input h-10 text-sm" placeholder="Road name, area, landmark" />
                     </div>
 
                     <div>
-                      <label className="mb-1 block text-xs font-medium text-slate-700">
-                        PIN code *
-                      </label>
-                      <input
-                        type="text"
-                        name="zipCode"
-                        required
-                        value={newAddress.zipCode}
-                        onChange={handleAddressChange}
-                        className="input h-10 text-sm"
-                        placeholder="6-digit PIN"
-                      />
+                      <label className="mb-1 block text-xs font-medium text-slate-700">PIN code *</label>
+                      <input type="text" name="zipCode" required value={newAddress.zipCode} onChange={handleAddressChange} className="input h-10 text-sm" placeholder="6-digit PIN" />
                       <div className="mt-1 text-[11px]">
-                        {pinLoading && (
-                          <span className="text-slate-500">
-                            Fetching location…
-                          </span>
-                        )}
-                        {!pinLoading && pinError && (
-                          <span className="text-red-600">{pinError}</span>
-                        )}
-                        {!pinLoading && !pinError && newAddress.zipCode && (
-                          <span className="text-slate-500">
-                            Location auto-filled based on PIN (you can edit
-                            manually).
-                          </span>
-                        )}
+                        {pinLoading && <span className="text-slate-500">Fetching location…</span>}
+                        {!pinLoading && pinError && <span className="text-red-600">{pinError}</span>}
+                        {!pinLoading && !pinError && newAddress.zipCode && <span className="text-slate-500">Location auto-filled based on PIN (you can edit manually).</span>}
                       </div>
                     </div>
 
                     <div>
-                      <label className="mb-1 block text-xs font-medium text-slate-700">
-                        City *
-                      </label>
-                      <input
-                        type="text"
-                        name="city"
-                        required
-                        value={newAddress.city}
-                        onChange={handleAddressChange}
-                        className="input h-10 text-sm"
-                      />
+                      <label className="mb-1 block text-xs font-medium text-slate-700">City *</label>
+                      <input type="text" name="city" required value={newAddress.city} onChange={handleAddressChange} className="input h-10 text-sm" />
                     </div>
 
                     <div>
-                      <label className="mb-1 block text-xs font-medium text-slate-700">
-                        State *
-                      </label>
-                      <input
-                        type="text"
-                        name="state"
-                        required
-                        value={newAddress.state}
-                        onChange={handleAddressChange}
-                        className="input h-10 text-sm"
-                      />
+                      <label className="mb-1 block text-xs font-medium text-slate-700">State *</label>
+                      <input type="text" name="state" required value={newAddress.state} onChange={handleAddressChange} className="input h-10 text-sm" />
                     </div>
 
                     <div>
-                      <label className="mb-1 block text-xs font-medium text-slate-700">
-                        Country *
-                      </label>
-                      <input
-                        type="text"
-                        name="country"
-                        required
-                        value={newAddress.country}
-                        onChange={handleAddressChange}
-                        className="input h-10 text-sm"
-                      />
+                      <label className="mb-1 block text-xs font-medium text-slate-700">Country *</label>
+                      <input type="text" name="country" required value={newAddress.country} onChange={handleAddressChange} className="input h-10 text-sm" />
                     </div>
                   </div>
 
                   <div className="mt-4 flex flex-wrap gap-3">
-                    <button
-                      type="submit"
-                      disabled={loading}
-                      className="inline-flex items-center justify-center rounded-full bg-slate-900 px-5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-black disabled:opacity-60"
-                    >
-                      Save address
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setShowAddressForm(false);
-                      }}
-                      className="inline-flex items-center justify-center rounded-full border border-slate-200 bg-white px-5 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-                    >
-                      Cancel
-                    </button>
+                    <button type="submit" disabled={loading} className="inline-flex items-center justify-center rounded-full bg-slate-900 px-5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-black disabled:opacity-60">Save address</button>
+                    <button type="button" onClick={() => setShowAddressForm(false)} className="inline-flex items-center justify-center rounded-full border border-slate-200 bg-white px-5 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">Cancel</button>
                   </div>
                 </form>
               )}
@@ -2158,11 +2238,7 @@ window.open(waUrl, "_blank", "noopener,noreferrer");
                   addresses.map((address) => (
                     <label
                       key={address._id}
-                      className={`flex cursor-pointer items-start gap-3 rounded-2xl border-2 bg-white p-3 transition-all sm:p-4 ${
-                        selectedAddress === address._id
-                          ? "border-slate-900 bg-slate-900/5 shadow-sm"
-                          : "border-slate-200 hover:border-slate-400 hover:bg-slate-50"
-                      }`}
+                      className={`flex cursor-pointer items-start gap-3 rounded-2xl border-2 bg-white p-3 transition-all sm:p-4 ${selectedAddress === address._id ? "border-slate-900 bg-slate-900/5 shadow-sm" : "border-slate-200 hover:border-slate-400 hover:bg-slate-50"}`}
                     >
                       <input
                         aria-label={`Select address ${address.addressLine1}`}
@@ -2176,24 +2252,12 @@ window.open(waUrl, "_blank", "noopener,noreferrer");
                       <div className="flex flex-1 flex-col gap-1">
                         <div className="flex items-center gap-2">
                           {getAddressIcon(address.type)}
-                          <span className="text-sm font-semibold text-slate-900 capitalize">
-                            {address.type}
-                          </span>
-                          {address.isDefault && (
-                            <span className="inline-flex items-center rounded-full bg-slate-900/5 px-2 py-0.5 text-[10px] font-semibold text-slate-900">
-                              Default
-                            </span>
-                          )}
+                          <span className="text-sm font-semibold text-slate-900 capitalize">{address.type}</span>
+                          {address.isDefault && <span className="inline-flex items-center rounded-full bg-slate-900/5 px-2 py-0.5 text-[10px] font-semibold text-slate-900">Default</span>}
                         </div>
                         <div className="text-xs text-slate-600">
-                          <p className="line-clamp-2">
-                            {address.addressLine1}
-                            {address.addressLine2 &&
-                              `, ${address.addressLine2}`}
-                          </p>
-                          <p>
-                            {address.city}, {address.state} - {address.zipCode}
-                          </p>
+                          <p className="line-clamp-2">{address.addressLine1}{address.addressLine2 && `, ${address.addressLine2}`}</p>
+                          <p>{address.city}, {address.state} - {address.zipCode}</p>
                           <p>{address.country}</p>
                         </div>
                       </div>
@@ -2210,13 +2274,8 @@ window.open(waUrl, "_blank", "noopener,noreferrer");
                   <CreditCard size={18} />
                 </div>
                 <div>
-                  <h2 className="text-lg font-semibold text-slate-900">
-                    Confirm &amp; pay via WhatsApp
-                  </h2>
-                  <p className="text-xs text-slate-500">
-                    We’ll create your order and open a WhatsApp chat so you can
-                    confirm the payment and details directly with us.
-                  </p>
+                  <h2 className="text-lg font-semibold text-slate-900">Confirm &amp; pay via WhatsApp</h2>
+                  <p className="text-xs text-slate-500">We’ll create your order and open a WhatsApp chat so you can confirm the payment and details directly with us.</p>
                 </div>
               </div>
 
@@ -2226,31 +2285,15 @@ window.open(waUrl, "_blank", "noopener,noreferrer");
                     <ShieldCheck size={18} className="text-emerald-600" />
                   </div>
                   <div>
-                    <p className="text-sm font-semibold text-slate-900">
-                      Payment through WhatsApp
-                    </p>
-                    <p className="mt-1 text-xs text-slate-600">
-                      After you click &quot;Place order&quot;, your order will
-                      be created and a WhatsApp chat will open with your order
-                      ID and details. Confirm payment and any final instructions
-                      there.
-                    </p>
+                    <p className="text-sm font-semibold text-slate-900">Payment through WhatsApp</p>
+                    <p className="mt-1 text-xs text-slate-600">After you click "Place order", your order will be created and a WhatsApp chat will open with your order ID and details. Confirm payment and any final instructions there.</p>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 gap-3 text-xs text-slate-500 sm:grid-cols-3 mt-3">
-                  <div className="flex items-center gap-2">
-                    <Truck size={16} className="text-slate-900" />
-                    <span>Free delivery above ₹500</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <ShieldCheck size={16} className="text-slate-900" />
-                    <span>Direct confirmation on WhatsApp</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <AlertCircle size={16} className="text-amber-500" />
-                    <span>Keep WhatsApp installed &amp; logged in</span>
-                  </div>
+                  <div className="flex items-center gap-2"><Truck size={16} className="text-slate-900" /><span>Free delivery above ₹500</span></div>
+                  <div className="flex items-center gap-2"><ShieldCheck size={16} className="text-slate-900" /><span>Direct confirmation on WhatsApp</span></div>
+                  <div className="flex items-center gap-2"><AlertCircle size={16} className="text-amber-500" /><span>Keep WhatsApp installed &amp; logged in</span></div>
                 </div>
               </div>
             </div>
@@ -2262,115 +2305,857 @@ window.open(waUrl, "_blank", "noopener,noreferrer");
               <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-md">
                 <div className="bg-gradient-to-r from-slate-900 to-slate-700 px-4 py-3 text-white">
                   <h2 className="text-lg font-semibold">Order summary</h2>
-                  <p className="text-xs text-slate-200">
-                    Review items and charges before placing the order.
-                  </p>
+                  <p className="text-xs text-slate-200">Review items and charges before placing the order.</p>
                 </div>
 
                 <div className="p-4 sm:p-5">
                   {/* Cart Items */}
                   <div className="mb-4 max-h-60 space-y-3 overflow-y-auto pr-1">
-                    {cartItems.map((item) => {
-                      const price =
-                        item.product.discountPrice || item.product.price;
+                    {cartItems.map((item, idx) => {
+                      const unit = getUnitPriceForItem(item);
+                      const line = Number(unit * (item.quantity || 0));
+                      const keyId = `${toId(item.product) || "unknown"}_${item.variantId || "base"}_${idx}`;
                       return (
-                        <div
-                          key={item.product._id}
-                          className="flex items-center gap-3 rounded-xl bg-slate-50 p-2"
-                        >
-                          <img
-                            src={
-                              item.product.images?.[0]?.url ||
-                              "/placeholder.png"
-                            }
-                            alt={item.product.name}
-                            className="h-12 w-12 rounded-lg border border-slate-200 object-contain bg-white"
-                          />
+                        <div key={keyId} className="flex items-center gap-3 rounded-xl bg-slate-50 p-2">
+                          <img src={getProductImage(item.product)} alt={getProductName(item.product)} className="h-12 w-12 rounded-lg border border-slate-200 object-contain bg-white" />
                           <div className="flex-1">
-                            <p className="line-clamp-1 text-xs font-medium text-slate-900">
-                              {item.product.name}
-                            </p>
-                            <p className="mt-0.5 text-[11px] text-slate-500">
-                              Qty: {item.quantity}
-                            </p>
+                            <p className="line-clamp-1 text-xs font-medium text-slate-900">{getProductName(item.product)}{item.variant?.name ? ` — ${item.variant.name}` : ""}</p>
+                            <p className="mt-0.5 text-[11px] text-slate-500">Qty: {item.quantity}</p>
                           </div>
-                          <p className="text-xs font-semibold text-slate-900">
-                            ₹{(price * item.quantity).toLocaleString()}
-                          </p>
+                          <p className="text-xs font-semibold text-slate-900">₹{line.toLocaleString()}</p>
                         </div>
                       );
                     })}
                   </div>
 
                   <div className="mb-4 space-y-2 border-t border-slate-200 pt-4 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-slate-600">Subtotal</span>
-                      <span className="font-semibold">
-                        ₹{getCartTotal().toLocaleString()}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-600">Tax (18% GST)</span>
-                      <span className="font-semibold">
-                        ₹{calculateTax().toLocaleString()}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-600">Shipping</span>
-                      <span className="font-semibold">
-                        {calculateShipping() === 0 ? (
-                          <span className="text-slate-900 font-semibold">
-                            FREE
-                          </span>
-                        ) : (
-                          `₹${calculateShipping()}`
-                        )}
-                      </span>
-                    </div>
+                    <div className="flex justify-between"><span className="text-slate-600">Subtotal</span><span className="font-semibold">₹{localSubtotal.toLocaleString()}</span></div>
+                    <div className="flex justify-between"><span className="text-slate-600">Tax (18% GST)</span><span className="font-semibold">₹{calculateTax().toLocaleString()}</span></div>
+                    <div className="flex justify-between"><span className="text-slate-600">Shipping</span><span className="font-semibold">{calculateShipping() === 0 ? <span className="text-slate-900 font-semibold">FREE</span> : `₹${calculateShipping()}`}</span></div>
                   </div>
 
                   <div className="mb-4 rounded-xl bg-slate-50 px-3 py-3">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm font-semibold text-slate-900">
-                        Total payable
-                      </span>
-                      <span className="text-xl font-bold text-slate-900">
-                        ₹{calculateTotal().toLocaleString()}
-                      </span>
+                      <span className="text-sm font-semibold text-slate-900">Total payable</span>
+                      <span className="text-xl font-bold text-slate-900">₹{calculateTotal().toLocaleString()}</span>
                     </div>
-                    <p className="mt-1 text-[11px] text-slate-500">
-                      You will receive order details and updates on your
-                      registered email and mobile.
-                    </p>
+                    <p className="mt-1 text-[11px] text-slate-500">You will receive order details and updates on your registered email and mobile.</p>
                   </div>
 
-                  <button
-                    onClick={handlePlaceOrder}
-                    disabled={loading || !selectedAddress}
-                    className="w-full rounded-full bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white shadow-md hover:bg-black disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {loading
-                      ? "Creating order..."
-                      : selectedAddress
-                      ? "Place order & continue on WhatsApp"
-                      : "Select an address to continue"}
+                  <button onClick={handlePlaceOrder} disabled={loading || !selectedAddress} className="w-full rounded-full bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white shadow-md hover:bg-black disabled:cursor-not-allowed disabled:opacity-60">
+                    {loading ? "Processing..." : selectedAddress ? "Place order & continue on WhatsApp" : "Select an address to continue"}
                   </button>
 
                   <div className="mt-3 flex items-center gap-2 text-[11px] text-slate-500">
                     <ShieldCheck size={14} className="text-slate-900" />
-                    <span>
-                      Payments are confirmed manually via WhatsApp. We do not
-                      store your card details.
-                    </span>
+                    <span>Payments are confirmed manually via WhatsApp. We do not store your card details.</span>
                   </div>
                 </div>
               </div>
             </div>
           </div>
         </div>
+
+        {/* Confirmation modal */}
+        {confirmOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/50" onClick={() => setConfirmOpen(false)} />
+            <div className="relative z-50 w-full max-w-md rounded-2xl bg-white shadow-2xl p-5">
+              <div className="flex items-start justify-between gap-3">
+                <h3 className="text-lg font-semibold">Confirm order</h3>
+                <button onClick={() => setConfirmOpen(false)} className="p-2 rounded-full text-slate-600 hover:bg-slate-100"><X size={16} /></button>
+              </div>
+
+              <div className="mt-3 space-y-3 text-sm">
+                <div className="flex justify-between">
+                  <span>Subtotal</span>
+                  <span>₹{localSubtotal.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Tax (18% GST)</span>
+                  <span>₹{calculateTax().toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Shipping</span>
+                  <span>{calculateShipping() === 0 ? "FREE" : `₹${calculateShipping()}`}</span>
+                </div>
+                <div className="border-t pt-3 flex justify-between font-bold">
+                  <span>Total payable</span>
+                  <span>₹{calculateTotal().toLocaleString()}</span>
+                </div>
+
+                <div className="mt-2 text-xs text-slate-600">
+                  A WhatsApp chat will open to confirm payment & delivery. Order will be created on the server and then you'll be redirected to WhatsApp.
+                </div>
+              </div>
+
+              <div className="mt-4 flex gap-3">
+                <button onClick={() => setConfirmOpen(false)} className="flex-1 rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">Cancel</button>
+                <button onClick={placeOrderConfirmed} disabled={loading} className="flex-1 rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700">{loading ? "Creating..." : "Confirm & open WhatsApp"}</button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
 };
 
 export default Checkout;
+
+
+// import React, { useState, useEffect, useCallback } from "react";
+// import { useNavigate } from "react-router-dom";
+// import { useCart } from "../context/CartContext";
+// import { useAuth } from "../context/AuthContext";
+// import api from "../utils/api";
+// import toast from "react-hot-toast";
+// import {
+//   MapPin,
+//   Home,
+//   Briefcase,
+//   Building2,
+//   CreditCard,
+//   ShieldCheck,
+//   Truck,
+//   AlertCircle,
+// } from "lucide-react";
+
+// const Checkout = () => {
+//   const navigate = useNavigate();
+//   const { user } = useAuth();
+//   const { cartItems, getCartTotal, clearCart } = useCart();
+
+//   const [addresses, setAddresses] = useState([]);
+//   const [selectedAddress, setSelectedAddress] = useState(null);
+//   const [loading, setLoading] = useState(false);
+//   const [showAddressForm, setShowAddressForm] = useState(false);
+//   const [newAddress, setNewAddress] = useState({
+//     type: "home",
+//     addressLine1: "",
+//     addressLine2: "",
+//     city: "",
+//     state: "",
+//     zipCode: "",
+//     country: "India",
+//   });
+
+//   // PIN code helper state
+//   const [pinLoading, setPinLoading] = useState(false);
+//   const [pinError, setPinError] = useState("");
+
+//   // 🔢 Your WhatsApp business number (country code + number, no + sign)
+//   // Example: '919876543210'
+//   const WHATSAPP_NUMBER = "917204929407";
+
+//   // fetchAddresses is used in useEffect and after add address
+//   const fetchAddresses = useCallback(async () => {
+//     try {
+//       const res = await api.get("/users/profile");
+//       const userAddresses = res.data.addresses || [];
+//       setAddresses(userAddresses);
+
+//       const defaultAddr =
+//         userAddresses.find((a) => a.isDefault) || userAddresses[0];
+//       if (defaultAddr) setSelectedAddress(defaultAddr._id);
+//     } catch (err) {
+//       console.error("Error fetching addresses:", err);
+//       toast.error("Failed to load addresses");
+//     }
+//   }, []);
+
+//   useEffect(() => {
+//     if (!user) {
+//       navigate("/login", { state: { from: { pathname: "/checkout" } } });
+//       return;
+//     }
+//     if (!cartItems || cartItems.length === 0) {
+//       navigate("/cart");
+//       return;
+//     }
+
+//     fetchAddresses();
+//     // eslint-disable-next-line react-hooks/exhaustive-deps
+//   }, [user, cartItems]);
+
+//   const handleAddressChange = (e) =>
+//     setNewAddress({ ...newAddress, [e.target.name]: e.target.value });
+
+//   const handleAddAddress = async (e) => {
+//     e.preventDefault();
+//     try {
+//       setLoading(true);
+//       await api.post("/users/address", newAddress);
+//       toast.success("Address added");
+//       setShowAddressForm(false);
+//       setNewAddress({
+//         type: "home",
+//         addressLine1: "",
+//         addressLine2: "",
+//         city: "",
+//         state: "",
+//         zipCode: "",
+//         country: "India",
+//       });
+//       await fetchAddresses();
+//     } catch (err) {
+//       console.error("Add address error:", err);
+//       toast.error(err.response?.data?.message || "Failed to add address");
+//     } finally {
+//       setLoading(false);
+//     }
+//   };
+
+//   // ===== Auto-fill City / State / Country from PIN code =====
+//   useEffect(() => {
+//     const pincode = newAddress.zipCode.trim();
+
+//     if (!pincode) {
+//       setPinError("");
+//       return;
+//     }
+
+//     if (pincode.length !== 6 || !/^\d{6}$/.test(pincode)) {
+//       setPinError("Enter a valid 6-digit PIN code");
+//       return;
+//     }
+
+//     const fetchPinDetails = async () => {
+//       try {
+//         setPinLoading(true);
+//         setPinError("");
+
+//         const res = await fetch(
+//           `https://api.postalpincode.in/pincode/${pincode}`
+//         );
+//         const data = await res.json();
+
+//         const entry = data?.[0];
+//         if (!entry || entry.Status !== "Success" || !entry.PostOffice?.length) {
+//           setPinError("PIN code not found. Please check and try again.");
+//           return;
+//         }
+
+//         const po = entry.PostOffice[0];
+
+//         setNewAddress((prev) => ({
+//           ...prev,
+//           city: po.District || prev.city,
+//           state: po.State || prev.state,
+//           country: po.Country || prev.country || "India",
+//         }));
+//         setPinError("");
+//       } catch (err) {
+//         console.error("Pincode lookup error:", err);
+//         setPinError(
+//           "Unable to fetch location for this PIN. Please fill manually."
+//         );
+//       } finally {
+//         setPinLoading(false);
+//       }
+//     };
+
+//     fetchPinDetails();
+//   }, [newAddress.zipCode]);
+
+//   const calculateTax = () =>
+//     typeof getCartTotal === "function" ? getCartTotal() * 0.18 : 0;
+//   const calculateShipping = () => (getCartTotal() > 500 ? 0 : 80);
+//   const calculateTotal = () =>
+//     getCartTotal() + calculateTax() + calculateShipping();
+
+//   // ---------- Core: place order and redirect to WhatsApp ----------
+//   const handlePlaceOrder = async () => {
+//     if (!selectedAddress) {
+//       toast.error("Please select a delivery address");
+//       return;
+//     }
+
+//     setLoading(true);
+
+//     try {
+//       const selectedAddr = addresses.find((a) => a._id === selectedAddress);
+//       if (!selectedAddr) {
+//         toast.error("Selected address not found");
+//         setLoading(false);
+//         return;
+//       }
+
+//       const payload = {
+//         items: cartItems.map((item) => ({
+//           product: item.product._id,
+//           name: item.product.name,
+//           image: item.product.images?.[0]?.url || "",
+//           quantity: item.quantity,
+//           price: item.product.price,
+//           discountPrice: item.product.discountPrice,
+//         })),
+//         shippingAddress: {
+//           firstName: user.firstName,
+//           lastName: user.lastName,
+//           addressLine1: selectedAddr.addressLine1,
+//           addressLine2: selectedAddr.addressLine2,
+//           city: selectedAddr.city,
+//           state: selectedAddr.state,
+//           zipCode: selectedAddr.zipCode,
+//           country: selectedAddr.country,
+//           mobile: user.mobile || "",
+//         },
+//         billingAddress: {
+//           firstName: user.firstName,
+//           lastName: user.lastName,
+//           addressLine1: selectedAddr.addressLine1,
+//           addressLine2: selectedAddr.addressLine2,
+//           city: selectedAddr.city,
+//           state: selectedAddr.state,
+//           zipCode: selectedAddr.zipCode,
+//           country: selectedAddr.country,
+//           mobile: user.mobile || "",
+//         },
+//         itemsPrice: getCartTotal(),
+//         taxPrice: calculateTax(),
+//         shippingPrice: calculateShipping(),
+//         totalPrice: calculateTotal(),
+//         paymentMethod: "whatsapp", // 👈 important
+//         currency: "INR",
+//         customer: {
+//           customer_id: user._id,
+//           customer_email: user.email,
+//           customer_phone: user.mobile || "",
+//         },
+//       };
+
+//       const res = await api.post("/payments/create-order", payload);
+//       const order = res.data.order || res.data;
+
+//       // Clear cart on frontend
+//       clearCart();
+
+//       // Build WhatsApp message
+// // Build WhatsApp message (nicer formatting)
+// const itemsText = cartItems
+//   .map((item) => {
+//     const price = item.product.discountPrice || item.product.price;
+//     const lineTotal = price * item.quantity;
+
+//     return `• *${item.product.name}*  x ${item.quantity}  –  ₹${lineTotal.toLocaleString()}`;
+//   })
+//   .join("\n");
+
+// const subtotal = getCartTotal();
+// const tax = calculateTax();
+// const shipping = calculateShipping();
+// const total = calculateTotal();
+
+// const message = [
+//   "🛒 *New Order from Website*",
+//   "",
+//   `*Order ID:* ${order._id}`,
+//   `*Name:* ${user.firstName} ${user.lastName}`,
+//   user.mobile ? `*Mobile:* ${user.mobile}` : "",
+//   user.email ? `*Email:* ${user.email}` : "",
+//   "",
+//   "📍 *Shipping address*",
+//   `${selectedAddr.addressLine1}`,
+//   selectedAddr.addressLine2 ? selectedAddr.addressLine2 : "",
+//   `${selectedAddr.city}, ${selectedAddr.state} - ${selectedAddr.zipCode}`,
+//   `${selectedAddr.country}`,
+//   "",
+//   "📦 *Items*",
+//   itemsText,
+//   "",
+//   "💰 *Payment summary*",
+//   `• Subtotal: ₹${subtotal.toLocaleString()}`,
+//   `• Tax (18% GST): ₹${tax.toLocaleString()}`,
+//   `• Shipping: ${
+//     shipping === 0 ? "FREE" : `₹${shipping.toLocaleString()}`
+//   }`,
+//   `————————————`,
+//   `*Total payable: ₹${total.toLocaleString()}*`,
+//   "",
+//   "✅ Please confirm *payment options* and *delivery details* here on WhatsApp.",
+// ].filter(Boolean) // remove empty lines like missing email/mobile
+//  .join("\n");
+
+// const waUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(
+//   message
+// )}`;
+
+// window.open(waUrl, "_blank", "noopener,noreferrer");
+
+
+//       toast.success("Order created. Continue in WhatsApp to confirm payment.");
+//       setLoading(false);
+
+//       // Optionally navigate to order details page
+//       navigate(`/orders/${order._id}`);
+//     } catch (err) {
+//       console.error("Place order error:", err);
+//       const msg =
+//         err?.response?.data?.message || err?.message || "Failed to place order";
+//       toast.error(msg);
+//       setLoading(false);
+//     }
+//   };
+
+//   const getAddressIcon = (type) => {
+//     if (type === "home") return <Home size={18} className="text-slate-900" />;
+//     if (type === "work")
+//       return <Briefcase size={18} className="text-sky-600" />;
+//     return <Building2 size={18} className="text-violet-600" />;
+//   };
+
+//   return (
+//     <div className="min-h-screen bg-gradient-to-b from-slate-50 via-slate-100 to-white">
+//       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+//         {/* Heading + Steps */}
+//         <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+//           <div>
+//             <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">
+//               Checkout
+//             </h1>
+//             <p className="mt-1 text-sm text-slate-500">
+//               Complete your order in a few simple steps.
+//             </p>
+//           </div>
+
+//           {/* Step indicator */}
+//           <div className="flex items-center gap-2 text-xs sm:text-sm font-medium text-slate-500">
+//             <div className="flex items-center gap-1">
+//               <span className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-900 text-[10px] font-bold text-white">
+//                 1
+//               </span>
+//               <span>Cart</span>
+//             </div>
+//             <span className="h-px w-6 bg-slate-300" />
+//             <div className="flex items-center gap-1">
+//               <span className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-900 text-[10px] font-bold text-white">
+//                 2
+//               </span>
+//               <span>Address &amp; WhatsApp</span>
+//             </div>
+//             <span className="h-px w-6 bg-slate-300" />
+//             <div className="flex items-center gap-1 opacity-60">
+//               <span className="flex h-6 w-6 items-center justify-center rounded-full border border-slate-300 text-[10px] font-bold text-slate-500">
+//                 3
+//               </span>
+//               <span>Confirmation</span>
+//             </div>
+//           </div>
+//         </div>
+
+//         <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+//           <div className="space-y-6 lg:col-span-2">
+//             {/* Delivery Address */}
+//             <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-6 shadow-sm">
+//               <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+//                 <div className="flex items-center gap-2">
+//                   <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-900/5 text-slate-900">
+//                     <MapPin size={18} />
+//                   </div>
+//                   <div>
+//                     <h2 className="text-lg font-semibold text-slate-900">
+//                       Delivery address
+//                     </h2>
+//                     <p className="text-xs text-slate-500">
+//                       Choose an existing address or add a new one.
+//                     </p>
+//                   </div>
+//                 </div>
+//                 <button
+//                   onClick={() => setShowAddressForm(!showAddressForm)}
+//                   className="inline-flex items-center justify-center rounded-full bg-slate-900 px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-black"
+//                 >
+//                   {showAddressForm ? "Cancel" : "Add new address"}
+//                 </button>
+//               </div>
+
+//               {/* Address form */}
+//               {showAddressForm && (
+//                 <form
+//                   onSubmit={handleAddAddress}
+//                   className="mb-6 rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5"
+//                 >
+//                   <div className="mb-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
+//                     <label className="col-span-1 text-xs font-medium text-slate-700">
+//                       Address type
+//                     </label>
+//                     <div className="col-span-2 flex flex-wrap gap-2">
+//                       {["home", "work", "other"].map((type) => (
+//                         <button
+//                           key={type}
+//                           type="button"
+//                           onClick={() =>
+//                             setNewAddress((prev) => ({ ...prev, type }))
+//                           }
+//                           className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-medium capitalize transition ${
+//                             newAddress.type === type
+//                               ? "bg-slate-900 text-white shadow-sm"
+//                               : "bg-white text-slate-700 border border-slate-200 hover:border-slate-400"
+//                           }`}
+//                         >
+//                           {getAddressIcon(type)}
+//                           <span className="hidden sm:inline">
+//                             {type === "home"
+//                               ? "Home"
+//                               : type === "work"
+//                               ? "Work"
+//                               : "Other"}
+//                           </span>
+//                         </button>
+//                       ))}
+//                     </div>
+//                   </div>
+
+//                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+//                     <div className="sm:col-span-2">
+//                       <label className="mb-1 block text-xs font-medium text-slate-700">
+//                         Address line 1 *
+//                       </label>
+//                       <input
+//                         type="text"
+//                         name="addressLine1"
+//                         required
+//                         value={newAddress.addressLine1}
+//                         onChange={handleAddressChange}
+//                         className="input h-10 text-sm"
+//                         placeholder="House/Flat No., Building Name"
+//                       />
+//                     </div>
+
+//                     <div className="sm:col-span-2">
+//                       <label className="mb-1 block text-xs font-medium text-slate-700">
+//                         Address line 2
+//                       </label>
+//                       <input
+//                         type="text"
+//                         name="addressLine2"
+//                         value={newAddress.addressLine2}
+//                         onChange={handleAddressChange}
+//                         className="input h-10 text-sm"
+//                         placeholder="Road name, area, landmark"
+//                       />
+//                     </div>
+
+//                     <div>
+//                       <label className="mb-1 block text-xs font-medium text-slate-700">
+//                         PIN code *
+//                       </label>
+//                       <input
+//                         type="text"
+//                         name="zipCode"
+//                         required
+//                         value={newAddress.zipCode}
+//                         onChange={handleAddressChange}
+//                         className="input h-10 text-sm"
+//                         placeholder="6-digit PIN"
+//                       />
+//                       <div className="mt-1 text-[11px]">
+//                         {pinLoading && (
+//                           <span className="text-slate-500">
+//                             Fetching location…
+//                           </span>
+//                         )}
+//                         {!pinLoading && pinError && (
+//                           <span className="text-red-600">{pinError}</span>
+//                         )}
+//                         {!pinLoading && !pinError && newAddress.zipCode && (
+//                           <span className="text-slate-500">
+//                             Location auto-filled based on PIN (you can edit
+//                             manually).
+//                           </span>
+//                         )}
+//                       </div>
+//                     </div>
+
+//                     <div>
+//                       <label className="mb-1 block text-xs font-medium text-slate-700">
+//                         City *
+//                       </label>
+//                       <input
+//                         type="text"
+//                         name="city"
+//                         required
+//                         value={newAddress.city}
+//                         onChange={handleAddressChange}
+//                         className="input h-10 text-sm"
+//                       />
+//                     </div>
+
+//                     <div>
+//                       <label className="mb-1 block text-xs font-medium text-slate-700">
+//                         State *
+//                       </label>
+//                       <input
+//                         type="text"
+//                         name="state"
+//                         required
+//                         value={newAddress.state}
+//                         onChange={handleAddressChange}
+//                         className="input h-10 text-sm"
+//                       />
+//                     </div>
+
+//                     <div>
+//                       <label className="mb-1 block text-xs font-medium text-slate-700">
+//                         Country *
+//                       </label>
+//                       <input
+//                         type="text"
+//                         name="country"
+//                         required
+//                         value={newAddress.country}
+//                         onChange={handleAddressChange}
+//                         className="input h-10 text-sm"
+//                       />
+//                     </div>
+//                   </div>
+
+//                   <div className="mt-4 flex flex-wrap gap-3">
+//                     <button
+//                       type="submit"
+//                       disabled={loading}
+//                       className="inline-flex items-center justify-center rounded-full bg-slate-900 px-5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-black disabled:opacity-60"
+//                     >
+//                       Save address
+//                     </button>
+//                     <button
+//                       type="button"
+//                       onClick={() => {
+//                         setShowAddressForm(false);
+//                       }}
+//                       className="inline-flex items-center justify-center rounded-full border border-slate-200 bg-white px-5 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+//                     >
+//                       Cancel
+//                     </button>
+//                   </div>
+//                 </form>
+//               )}
+
+//               {/* Address list */}
+//               <div className="space-y-3">
+//                 {addresses.length === 0 ? (
+//                   <div className="flex items-center gap-2 rounded-xl border border-dashed border-slate-300 bg-slate-50 px-3 py-3 text-xs text-slate-500">
+//                     <AlertCircle size={16} className="text-amber-500" />
+//                     <span>No saved addresses. Please add one.</span>
+//                   </div>
+//                 ) : (
+//                   addresses.map((address) => (
+//                     <label
+//                       key={address._id}
+//                       className={`flex cursor-pointer items-start gap-3 rounded-2xl border-2 bg-white p-3 transition-all sm:p-4 ${
+//                         selectedAddress === address._id
+//                           ? "border-slate-900 bg-slate-900/5 shadow-sm"
+//                           : "border-slate-200 hover:border-slate-400 hover:bg-slate-50"
+//                       }`}
+//                     >
+//                       <input
+//                         aria-label={`Select address ${address.addressLine1}`}
+//                         type="radio"
+//                         name="address"
+//                         value={address._id}
+//                         checked={selectedAddress === address._id}
+//                         onChange={(e) => setSelectedAddress(e.target.value)}
+//                         className="mt-1 h-4 w-4 text-slate-900 focus:ring-slate-900"
+//                       />
+//                       <div className="flex flex-1 flex-col gap-1">
+//                         <div className="flex items-center gap-2">
+//                           {getAddressIcon(address.type)}
+//                           <span className="text-sm font-semibold text-slate-900 capitalize">
+//                             {address.type}
+//                           </span>
+//                           {address.isDefault && (
+//                             <span className="inline-flex items-center rounded-full bg-slate-900/5 px-2 py-0.5 text-[10px] font-semibold text-slate-900">
+//                               Default
+//                             </span>
+//                           )}
+//                         </div>
+//                         <div className="text-xs text-slate-600">
+//                           <p className="line-clamp-2">
+//                             {address.addressLine1}
+//                             {address.addressLine2 &&
+//                               `, ${address.addressLine2}`}
+//                           </p>
+//                           <p>
+//                             {address.city}, {address.state} - {address.zipCode}
+//                           </p>
+//                           <p>{address.country}</p>
+//                         </div>
+//                       </div>
+//                     </label>
+//                   ))
+//                 )}
+//               </div>
+//             </div>
+
+//             {/* Payment: WhatsApp info */}
+//             <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-6 shadow-sm">
+//               <div className="mb-4 flex items-center gap-2">
+//                 <div className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-50 text-emerald-700">
+//                   <CreditCard size={18} />
+//                 </div>
+//                 <div>
+//                   <h2 className="text-lg font-semibold text-slate-900">
+//                     Confirm &amp; pay via WhatsApp
+//                   </h2>
+//                   <p className="text-xs text-slate-500">
+//                     We’ll create your order and open a WhatsApp chat so you can
+//                     confirm the payment and details directly with us.
+//                   </p>
+//                 </div>
+//               </div>
+
+//               <div className="space-y-3">
+//                 <div className="flex items-start gap-3 rounded-2xl border-2 border-emerald-500/60 bg-emerald-50 p-3 sm:p-4">
+//                   <div className="mt-0.5">
+//                     <ShieldCheck size={18} className="text-emerald-600" />
+//                   </div>
+//                   <div>
+//                     <p className="text-sm font-semibold text-slate-900">
+//                       Payment through WhatsApp
+//                     </p>
+//                     <p className="mt-1 text-xs text-slate-600">
+//                       After you click &quot;Place order&quot;, your order will
+//                       be created and a WhatsApp chat will open with your order
+//                       ID and details. Confirm payment and any final instructions
+//                       there.
+//                     </p>
+//                   </div>
+//                 </div>
+
+//                 <div className="grid grid-cols-1 gap-3 text-xs text-slate-500 sm:grid-cols-3 mt-3">
+//                   <div className="flex items-center gap-2">
+//                     <Truck size={16} className="text-slate-900" />
+//                     <span>Free delivery above ₹500</span>
+//                   </div>
+//                   <div className="flex items-center gap-2">
+//                     <ShieldCheck size={16} className="text-slate-900" />
+//                     <span>Direct confirmation on WhatsApp</span>
+//                   </div>
+//                   <div className="flex items-center gap-2">
+//                     <AlertCircle size={16} className="text-amber-500" />
+//                     <span>Keep WhatsApp installed &amp; logged in</span>
+//                   </div>
+//                 </div>
+//               </div>
+//             </div>
+//           </div>
+
+//           {/* Order Summary */}
+//           <div className="lg:col-span-1">
+//             <div className="sticky top-20">
+//               <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-md">
+//                 <div className="bg-gradient-to-r from-slate-900 to-slate-700 px-4 py-3 text-white">
+//                   <h2 className="text-lg font-semibold">Order summary</h2>
+//                   <p className="text-xs text-slate-200">
+//                     Review items and charges before placing the order.
+//                   </p>
+//                 </div>
+
+//                 <div className="p-4 sm:p-5">
+//                   {/* Cart Items */}
+//                   <div className="mb-4 max-h-60 space-y-3 overflow-y-auto pr-1">
+//                     {cartItems.map((item) => {
+//                       const price =
+//                         item.product.discountPrice || item.product.price;
+//                       return (
+//                         <div
+//                           key={item.product._id}
+//                           className="flex items-center gap-3 rounded-xl bg-slate-50 p-2"
+//                         >
+//                           <img
+//                             src={
+//                               item.product.images?.[0]?.url ||
+//                               "/placeholder.png"
+//                             }
+//                             alt={item.product.name}
+//                             className="h-12 w-12 rounded-lg border border-slate-200 object-contain bg-white"
+//                           />
+//                           <div className="flex-1">
+//                             <p className="line-clamp-1 text-xs font-medium text-slate-900">
+//                               {item.product.name}
+//                             </p>
+//                             <p className="mt-0.5 text-[11px] text-slate-500">
+//                               Qty: {item.quantity}
+//                             </p>
+//                           </div>
+//                           <p className="text-xs font-semibold text-slate-900">
+//                             ₹{(price * item.quantity).toLocaleString()}
+//                           </p>
+//                         </div>
+//                       );
+//                     })}
+//                   </div>
+
+//                   <div className="mb-4 space-y-2 border-t border-slate-200 pt-4 text-sm">
+//                     <div className="flex justify-between">
+//                       <span className="text-slate-600">Subtotal</span>
+//                       <span className="font-semibold">
+//                         ₹{getCartTotal().toLocaleString()}
+//                       </span>
+//                     </div>
+//                     <div className="flex justify-between">
+//                       <span className="text-slate-600">Tax (18% GST)</span>
+//                       <span className="font-semibold">
+//                         ₹{calculateTax().toLocaleString()}
+//                       </span>
+//                     </div>
+//                     <div className="flex justify-between">
+//                       <span className="text-slate-600">Shipping</span>
+//                       <span className="font-semibold">
+//                         {calculateShipping() === 0 ? (
+//                           <span className="text-slate-900 font-semibold">
+//                             FREE
+//                           </span>
+//                         ) : (
+//                           `₹${calculateShipping()}`
+//                         )}
+//                       </span>
+//                     </div>
+//                   </div>
+
+//                   <div className="mb-4 rounded-xl bg-slate-50 px-3 py-3">
+//                     <div className="flex items-center justify-between">
+//                       <span className="text-sm font-semibold text-slate-900">
+//                         Total payable
+//                       </span>
+//                       <span className="text-xl font-bold text-slate-900">
+//                         ₹{calculateTotal().toLocaleString()}
+//                       </span>
+//                     </div>
+//                     <p className="mt-1 text-[11px] text-slate-500">
+//                       You will receive order details and updates on your
+//                       registered email and mobile.
+//                     </p>
+//                   </div>
+
+//                   <button
+//                     onClick={handlePlaceOrder}
+//                     disabled={loading || !selectedAddress}
+//                     className="w-full rounded-full bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white shadow-md hover:bg-black disabled:cursor-not-allowed disabled:opacity-60"
+//                   >
+//                     {loading
+//                       ? "Creating order..."
+//                       : selectedAddress
+//                       ? "Place order & continue on WhatsApp"
+//                       : "Select an address to continue"}
+//                   </button>
+
+//                   <div className="mt-3 flex items-center gap-2 text-[11px] text-slate-500">
+//                     <ShieldCheck size={14} className="text-slate-900" />
+//                     <span>
+//                       Payments are confirmed manually via WhatsApp. We do not
+//                       store your card details.
+//                     </span>
+//                   </div>
+//                 </div>
+//               </div>
+//             </div>
+//           </div>
+//         </div>
+//       </div>
+//     </div>
+//   );
+// };
+
+// export default Checkout;

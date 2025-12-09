@@ -231,26 +231,46 @@ import toast from 'react-hot-toast';
 const ProductCard = ({ product }) => {
   const { addToCart, cartItems } = useCart();
 
-  // find existing quantity in cart for this product
+  // 🔥 Pick default variant (or first)
+  const variants = product.variants || [];
+  const selectedVariant =
+    variants.find((v) => v.isDefault) || variants[0] || null;
+
+  // If no variant found, fall back to old fields (for safety / old data)
+  const stock = selectedVariant ? selectedVariant.stock : product.stock || 0;
+
+  const displayPrice = selectedVariant
+    ? selectedVariant.discountPrice || selectedVariant.price
+    : product.discountPrice || product.price;
+
+  const basePrice = selectedVariant
+    ? selectedVariant.price
+    : product.price;
+
+  const hasDiscount =
+    selectedVariant
+      ? selectedVariant.discountPrice &&
+        selectedVariant.discountPrice < selectedVariant.price
+      : product.discountPrice && product.discountPrice < product.price;
+
+  const discountPercent =
+    hasDiscount && basePrice
+      ? Math.round(((basePrice - displayPrice) / basePrice) * 100)
+      : null;
+
+  const hasRatings = product.ratings?.average && product.ratings?.count > 0;
+
+  // 🛒 Cart: differentiate by product + variant
   const existingItem = cartItems?.find(
-    (item) => item.product._id === product._id
+    (item) =>
+      item.product._id === product._id &&
+      (selectedVariant ? item.variantId === selectedVariant._id : true)
   );
   const currentQtyInCart = existingItem ? existingItem.quantity : 0;
 
-  const isOutOfStock = product.stock <= 0;
-  const isAtStockLimit = currentQtyInCart >= product.stock; // already added all available
-  const isLowStock = product.stock > 0 && product.stock <= 5;
-
-  const displayPrice = product.discountPrice || product.price;
-  const hasDiscount =
-    product.discountPrice && product.discountPrice < product.price;
-  const hasRatings = product.ratings?.average && product.ratings?.count > 0;
-
-  const discountPercent = hasDiscount
-    ? Math.round(
-        ((product.price - product.discountPrice) / product.price) * 100
-      )
-    : null;
+  const isOutOfStock = !stock || stock <= 0;
+  const isAtStockLimit = currentQtyInCart >= stock;
+  const isLowStock = stock > 0 && stock <= 5;
 
   const handleAddToCart = (e) => {
     e.preventDefault(); // prevent navigation
@@ -262,14 +282,44 @@ const ProductCard = ({ product }) => {
 
     if (isAtStockLimit) {
       toast.error(
-        `You already added the maximum available quantity (${product.stock}).`
+        `You already added the maximum available quantity (${stock}).`
       );
       return;
     }
 
-    addToCart(product);
+    // 🔥 IMPORTANT: pass variant info to cart
+    // Adjust this line to match your CartContext API.
+    // Example assumption: addToCart(product, variant)
+    addToCart(product, selectedVariant);
+
     toast.success('Added to cart!');
   };
+
+  // Variant quantity/unit for display (e.g. "500 g", "1 kg", "500 g x 2")
+  const variantLabel =
+    selectedVariant?.displayQuantity ||
+    (selectedVariant?.quantity && selectedVariant?.unit
+      ? `${selectedVariant.quantity} ${selectedVariant.unit}`
+      : null);
+
+  // Per-unit price if possible
+  let perUnitText = null;
+  if (
+    selectedVariant &&
+    typeof selectedVariant.quantity === 'number' &&
+    selectedVariant.quantity > 0 &&
+    selectedVariant.unit
+  ) {
+    const perUnit = displayPrice / selectedVariant.quantity;
+    perUnitText = `₹${perUnit.toFixed(2)} / ${selectedVariant.unit}`;
+  }
+
+  const mainImage =
+    (selectedVariant &&
+      selectedVariant.images &&
+      selectedVariant.images[0]?.url) ||
+    product.images?.[0]?.url ||
+    '';
 
   return (
     <Link to={`/products/${product._id}`} className="group block h-full">
@@ -277,9 +327,9 @@ const ProductCard = ({ product }) => {
         {/* Image */}
         <div className="relative bg-gray-50">
           <div className="aspect-[4/3] w-full overflow-hidden">
-            {product.images && product.images[0] && (
+            {mainImage && (
               <img
-                src={product.images[0].url}
+                src={mainImage}
                 alt={product.name}
                 className={`h-full w-full object-cover transition-transform duration-300 group-hover:scale-105 ${
                   isOutOfStock || isAtStockLimit ? 'opacity-60' : ''
@@ -304,6 +354,12 @@ const ProductCard = ({ product }) => {
                 100% Organic
               </span>
             )}
+
+            {variantLabel && (
+              <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-semibold text-emerald-700 ring-1 ring-emerald-100">
+                {variantLabel}
+              </span>
+            )}
           </div>
 
           {/* Top right badges */}
@@ -322,7 +378,7 @@ const ProductCard = ({ product }) => {
 
             {isLowStock && !isOutOfStock && (
               <div className="rounded-full bg-orange-500 px-2.5 py-1 text-[11px] font-semibold text-white shadow-sm">
-                Only {product.stock} left
+                Only {stock} left
               </div>
             )}
 
@@ -341,17 +397,17 @@ const ProductCard = ({ product }) => {
             {product.name}
           </h3>
 
-          {/* Meta (brand / weight) */}
-          {(product.brand || product.weight || product.unit) && (
+          {/* Meta (brand / variant size) */}
+          {(product.brand || variantLabel) && (
             <div className="mb-2 flex flex-wrap items-center gap-2 text-[11px] font-medium text-gray-500">
               {product.brand && (
                 <span className="rounded-full bg-gray-100 px-2 py-0.5">
                   {product.brand}
                 </span>
               )}
-              {(product.weight || product.unit) && (
+              {variantLabel && (
                 <span className="rounded-full bg-gray-50 px-2 py-0.5">
-                  {product.weight} {product.unit}
+                  {variantLabel}
                 </span>
               )}
             </div>
@@ -400,15 +456,15 @@ const ProductCard = ({ product }) => {
               </p>
             ) : isAtStockLimit ? (
               <p className="text-[12px] font-semibold text-orange-600">
-                You added all available stock ({product.stock}).
+                You added all available stock ({stock}).
               </p>
             ) : isLowStock ? (
               <p className="text-[12px] font-semibold text-orange-600">
-                Only {product.stock} items left – order soon!
+                Only {stock} items left – order soon!
               </p>
             ) : (
               <p className="text-[12px] font-semibold text-gray-700">
-                In stock · {product.stock} available
+                In stock · {stock} available
               </p>
             )}
           </div>
@@ -419,27 +475,22 @@ const ProductCard = ({ product }) => {
               <span className="text-xl font-semibold text-gray-900">
                 ₹{displayPrice.toLocaleString()}
               </span>
-              {hasDiscount && (
+              {hasDiscount && basePrice && (
                 <span className="ml-2 text-xs text-gray-400 line-through">
-                  ₹{product.price.toLocaleString()}
+                  ₹{basePrice.toLocaleString()}
                 </span>
               )}
 
-              {(product.weight || product.unit) && (
+              {perUnitText && (
                 <div className="mt-0.5 text-[11px] text-gray-500">
-                  {product.weight && product.unit
-                    ? `₹${(displayPrice / product.weight).toFixed(2)} / ${
-                        product.unit
-                      }`
-                    : null}
+                  {perUnitText}
                 </div>
               )}
             </div>
 
-            {hasDiscount && (
+            {hasDiscount && basePrice && (
               <span className="rounded-full bg-gray-100 px-2 py-1 text-[11px] font-semibold text-gray-800">
-                You save ₹
-                {(product.price - product.discountPrice).toLocaleString()}
+                You save ₹{(basePrice - displayPrice).toLocaleString()}
               </span>
             )}
           </div>
@@ -447,9 +498,9 @@ const ProductCard = ({ product }) => {
           {/* Add to Cart Button */}
           <button
             onClick={handleAddToCart}
-            disabled={isOutOfStock || isAtStockLimit}
+            disabled={isOutOfStock || isAtStockLimit || !selectedVariant}
             className={`mt-auto inline-flex w-full items-center justify-center rounded-full px-4 py-2.5 text-sm font-semibold transition-all ${
-              isOutOfStock || isAtStockLimit
+              isOutOfStock || isAtStockLimit || !selectedVariant
                 ? 'cursor-not-allowed bg-gray-100 text-gray-400'
                 : 'bg-gray-900 text-white shadow-sm hover:bg-black hover:shadow-md'
             }`}
@@ -459,6 +510,8 @@ const ProductCard = ({ product }) => {
               ? 'Out of stock'
               : isAtStockLimit
               ? 'Max quantity in cart'
+              : !selectedVariant
+              ? 'Variant not available'
               : 'Add to cart'}
           </button>
         </div>
@@ -468,4 +521,3 @@ const ProductCard = ({ product }) => {
 };
 
 export default ProductCard;
-

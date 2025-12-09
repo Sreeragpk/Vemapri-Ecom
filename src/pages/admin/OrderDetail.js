@@ -786,6 +786,7 @@
 
 // export default AdminOrderDetail;
 // src/pages/admin/AdminOrderDetail.jsx
+// src/pages/admin/AdminOrderDetail.jsx
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../../utils/api';
@@ -1085,47 +1086,104 @@ const AdminOrderDetail = () => {
               <div className="p-6">
                 <div className="space-y-4">
                   {Array.isArray(order.items) &&
-                    order.items.map((item, index) => (
-                      <div
-                        key={index}
-                        className="group flex items-center gap-4 p-4 rounded-xl border-2 border-gray-100 hover:border-indigo-200 hover:bg-indigo-50/50 transition-all duration-300"
-                      >
-                        <div className="relative flex-shrink-0">
-                          <img
-                            src={item.image || '/placeholder.png'}
-                            alt={item.name}
-                            className="w-24 h-24 object-contain rounded-xl bg-gray-50 border border-gray-200 group-hover:scale-105 transition-transform duration-300"
-                          />
-                          <div className="absolute -top-2 -right-2 bg-indigo-600 text-white text-xs font-bold rounded-full w-7 h-7 flex items-center justify-center shadow-lg">
-                            {item.quantity}
+                    order.items.map((item, index) => {
+                      // 🔹 Safely compute unit price and totals
+                      const unitPrice = Number(
+                        item.discountPrice ??
+                          item.price ??
+                          item.unitPrice ??
+                          0
+                      );
+                      const lineTotal = unitPrice * (item.quantity || 0);
+
+                      // 🔹 Build a robust variant / pack label
+                      const variantLabel =
+                        item.variantLabel ||
+                        item.packLabel ||
+                        item.variantName ||
+                        item.variant?.displayQuantity ||
+                        (item.variantQuantity && item.variantUnit
+                          ? `${item.variantQuantity} ${item.variantUnit}`
+                          : item.variant?.quantity && item.variant?.unit
+                          ? `${item.variant.quantity} ${item.variant.unit}`
+                          : null);
+
+                      const baseName =
+                        item.name ||
+                        item.product?.name ||
+                        'Product';
+
+                      const displayName = variantLabel
+                        ? `${baseName} (${variantLabel})`
+                        : baseName;
+
+                      // 🔹 Per-unit info if we know pack quantity
+                      let perUnitText = null;
+                      const q =
+                        item.variantQuantity ||
+                        item.variant?.quantity;
+                      const u =
+                        item.variantUnit ||
+                        item.variant?.unit;
+                      if (unitPrice > 0 && q && Number(q) > 0 && u) {
+                        perUnitText = `₹${(unitPrice / Number(q)).toFixed(
+                          2
+                        )} / ${u}`;
+                      }
+
+                      const imageSrc =
+                        item.image ||
+                        item.product?.images?.[0]?.url ||
+                        '/placeholder.png';
+
+                      return (
+                        <div
+                          key={index}
+                          className="group flex items-center gap-4 p-4 rounded-xl border-2 border-gray-100 hover:border-indigo-200 hover:bg-indigo-50/50 transition-all duration-300"
+                        >
+                          <div className="relative flex-shrink-0">
+                            <img
+                              src={imageSrc}
+                              alt={displayName}
+                              className="w-24 h-24 object-contain rounded-xl bg-gray-50 border border-gray-200 group-hover:scale-105 transition-transform duration-300"
+                            />
+                            <div className="absolute -top-2 -right-2 bg-indigo-600 text-white text-xs font-bold rounded-full w-7 h-7 flex items-center justify-center shadow-lg">
+                              {item.quantity}
+                            </div>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-semibold text-gray-900 mb-1 group-hover:text-indigo-600 transition-colors truncate">
+                              {displayName}
+                            </h3>
+
+                            <div className="flex flex-wrap gap-3 text-sm text-gray-600">
+                              <span className="flex items-center gap-1">
+                                <Package size={14} />
+                                Qty: {item.quantity}
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <CreditCard size={14} />
+                                Unit: ₹{unitPrice.toLocaleString()}
+                              </span>
+                              {perUnitText && (
+                                <span className="flex items-center gap-1 text-xs text-gray-500">
+                                  <Info size={12} />
+                                  {perUnitText}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="text-right flex-shrink-0">
+                            <p className="text-xs text-gray-500 mb-1">
+                              Line total
+                            </p>
+                            <p className="text-lg font-bold text-indigo-600">
+                              ₹{lineTotal.toLocaleString()}
+                            </p>
                           </div>
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <h3 className="font-semibold text-gray-900 mb-1 group-hover:text-indigo-600 transition-colors truncate">
-                            {item.name}
-                          </h3>
-                          <div className="flex flex-wrap gap-3 text-sm text-gray-600">
-                            <span className="flex items-center gap-1">
-                              <Package size={14} />
-                              Qty: {item.quantity}
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <CreditCard size={14} />
-                              ₹{(item.discountPrice || item.price).toLocaleString()}
-                            </span>
-                          </div>
-                        </div>
-                        <div className="text-right flex-shrink-0">
-                          <p className="text-lg font-bold text-indigo-600">
-                            ₹
-                            {(
-                              ((item.discountPrice || item.price) * item.quantity) ||
-                              0
-                            ).toLocaleString()}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                 </div>
               </div>
             </div>
@@ -1728,3 +1786,4 @@ const AdminOrderDetail = () => {
 };
 
 export default AdminOrderDetail;
+
