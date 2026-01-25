@@ -523,7 +523,7 @@
 // export default ProductCard;
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ShoppingCart, Star, Heart, Zap, Shield, Truck, ChevronRight } from 'lucide-react';
+import { ShoppingCart, Star, Heart, Zap, Shield, Truck } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import toast from 'react-hot-toast';
 
