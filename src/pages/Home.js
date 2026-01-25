@@ -434,66 +434,126 @@ const Home = () => {
         </div>
       </section>
 
-      {/* Rest of your sections remain the same... */}
+      
       {/* WHAT WE OFFER */}
-      <section className="py-16 border-b border-slate-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <span className="inline-block px-4 py-1.5 rounded-full bg-amber-100 text-amber-800 text-xs font-bold tracking-wider uppercase mb-4">
-              Our Products
-            </span>
-            <h2 className="text-3xl md:text-4xl font-bold text-slate-900">
-              What We Offer
-            </h2>
-            <p className="mt-3 text-slate-600 max-w-2xl mx-auto">
-              Discover our carefully curated range of premium quality products
-            </p>
-          </div>
+      {/* WHAT WE OFFER - BENTO GRID */}
+<section className="py-20 bg-white border-b border-slate-200">
+  <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="text-center mb-16">
+      <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 mb-6">
+        <span className="relative flex h-2 w-2">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+          <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+        </span>
+        <span className="text-amber-800 text-sm font-semibold">Our Premium Collection</span>
+      </div>
+      <h2 className="text-4xl md:text-5xl font-bold text-slate-900 mb-4">
+        What We <span className="bg-gradient-to-r from-amber-500 to-orange-500 bg-clip-text text-transparent">Offer</span>
+      </h2>
+      <p className="text-lg text-slate-600 max-w-2xl mx-auto">
+        From farm-fresh spices to wholesome staples, discover products that bring authentic flavors to your kitchen
+      </p>
+    </div>
 
-          <div className="grid gap-6 md:grid-cols-3">
-            {[
-              {
-                title: 'Whole & Ground Spices',
-                desc: 'Authentic Indian spices like chilli, dhania, turmeric and more.',
-                gradient: 'from-red-50 to-orange-50',
-                icon: '🌶️'
-              },
-              {
-                title: 'Pulses & Staples',
-                desc: 'Everyday essentials such as Bengal gram and Bengal gram flour (besan).',
-                gradient: 'from-amber-50 to-yellow-50',
-                icon: '🌾'
-              },
-              {
-                title: 'Nuts, Seeds & Health Foods',
-                desc: 'Groundnuts, moringa powder and other wholesome ingredients.',
-                gradient: 'from-green-50 to-emerald-50',
-                icon: '🥜'
-              }
-            ].map((item, index) => (
-              <div
-                key={index}
-                className={`group relative rounded-2xl bg-gradient-to-br ${item.gradient} p-8 border border-slate-200 shadow-sm hover:shadow-xl transition-all duration-500 hover:-translate-y-2`}
-                style={{
-                  animation: `fadeInUp 0.6s ease-out ${index * 0.15}s both`
-                }}
-              >
-                <div className="text-4xl mb-4 group-hover:scale-110 transition-transform duration-300">
-                  {item.icon}
-                </div>
-                <h3 className="text-lg font-bold text-slate-900 mb-2">
-                  {item.title}
-                </h3>
-                <p className="text-sm text-slate-600 leading-relaxed">
-                  {item.desc}
-                </p>
-                
-                <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-amber-400/0 to-amber-600/0 group-hover:from-amber-400/5 group-hover:to-amber-600/5 transition-all duration-500 pointer-events-none" />
-              </div>
-            ))}
+    {/* Bento Grid */}
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {/* Large Featured Card */}
+      <div className="lg:col-span-2 lg:row-span-2 group relative overflow-hidden rounded-3xl bg-gradient-to-br from-red-500 via-orange-500 to-amber-500 p-1">
+        <div className="absolute inset-0 bg-gradient-to-br from-red-500 via-orange-500 to-amber-500 opacity-0 group-hover:opacity-100 blur-xl transition-opacity duration-500" />
+        <div className="relative h-full bg-white rounded-[22px] p-8 flex flex-col justify-between min-h-[400px]">
+          <div>
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-red-100 to-orange-100 mb-6 group-hover:scale-110 group-hover:rotate-3 transition-all duration-300">
+              <span className="text-4xl">🌶️</span>
+            </div>
+            <h3 className="text-2xl md:text-3xl font-bold text-slate-900 mb-4">
+              Whole & Ground Spices
+            </h3>
+            <p className="text-slate-600 text-lg leading-relaxed mb-6">
+              Authentic Indian spices sourced directly from trusted farms. From fiery red chillies to golden turmeric, our spices bring the true essence of Indian cooking to your kitchen.
+            </p>
+            <ul className="space-y-3">
+              {['Red Chilli Powder', 'Turmeric Powder', 'Coriander Seeds', 'Cumin Seeds'].map((item, i) => (
+                <li key={i} className="flex items-center gap-3 text-slate-700">
+                  <CheckCircle2 className="w-5 h-5 text-orange-500" />
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div className="mt-6">
+            <Link 
+              to="/products?category=Spices%20%26%20Masalas"
+              className="inline-flex items-center gap-2 text-orange-600 font-semibold group-hover:gap-4 transition-all duration-300"
+            >
+              Explore Spices
+              <ArrowRight className="w-5 h-5" />
+            </Link>
+          </div>
+          
+          {/* Decorative Elements */}
+          <div className="absolute top-4 right-4 w-32 h-32 bg-gradient-to-br from-orange-100 to-red-100 rounded-full blur-3xl opacity-50" />
+          <div className="absolute bottom-4 right-4 text-8xl opacity-10 group-hover:opacity-20 transition-opacity">
+            🌶️
           </div>
         </div>
-      </section>
+      </div>
+
+      {/* Medium Card - Pulses */}
+      <div className="group relative overflow-hidden rounded-3xl bg-gradient-to-br from-amber-400 via-yellow-400 to-amber-500 p-1">
+        <div className="relative h-full bg-white rounded-[22px] p-6 min-h-[200px] flex flex-col justify-between">
+          <div>
+            <div className="inline-flex items-center justify-center w-14 h-14 rounded-xl bg-gradient-to-br from-amber-100 to-yellow-100 mb-4 group-hover:scale-110 transition-transform duration-300">
+              <span className="text-3xl">🌾</span>
+            </div>
+            <h3 className="text-xl font-bold text-slate-900 mb-2">
+              Pulses & Staples
+            </h3>
+            <p className="text-slate-600 text-sm leading-relaxed">
+              Everyday essentials like Bengal gram, besan flour, and more for your daily cooking needs.
+            </p>
+          </div>
+          <Link 
+            to="/products?category=Pulses"
+            className="inline-flex items-center gap-2 text-amber-600 font-semibold text-sm mt-4 group-hover:gap-3 transition-all duration-300"
+          >
+            View Pulses <ArrowRight className="w-4 h-4" />
+          </Link>
+          
+          <div className="absolute bottom-2 right-2 text-6xl opacity-10 group-hover:opacity-20 transition-opacity">
+            🌾
+          </div>
+        </div>
+      </div>
+
+      {/* Medium Card - Health Foods */}
+      <div className="group relative overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-400 via-green-400 to-teal-500 p-1">
+        <div className="relative h-full bg-white rounded-[22px] p-6 min-h-[200px] flex flex-col justify-between">
+          <div>
+            <div className="inline-flex items-center justify-center w-14 h-14 rounded-xl bg-gradient-to-br from-emerald-100 to-green-100 mb-4 group-hover:scale-110 transition-transform duration-300">
+              <span className="text-3xl">🥜</span>
+            </div>
+            <h3 className="text-xl font-bold text-slate-900 mb-2">
+              Nuts & Health Foods
+            </h3>
+            <p className="text-slate-600 text-sm leading-relaxed">
+              Nutritious groundnuts, moringa powder, and other wholesome superfoods.
+            </p>
+          </div>
+          <Link 
+            to="/products?category=Health"
+            className="inline-flex items-center gap-2 text-emerald-600 font-semibold text-sm mt-4 group-hover:gap-3 transition-all duration-300"
+          >
+            View Health Foods <ArrowRight className="w-4 h-4" />
+          </Link>
+          
+          <div className="absolute bottom-2 right-2 text-6xl opacity-10 group-hover:opacity-20 transition-opacity">
+            🥜
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
 
       {/* WHY CHOOSE US */}
       <section className="py-16 bg-gradient-to-b from-white to-slate-50">
