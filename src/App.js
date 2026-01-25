@@ -100,7 +100,7 @@
 //               },
 //             }}
 //           />
-          
+
 //           <Routes>
 //             {/* Public Routes */}
 //             <Route path="/" element={<PublicLayout><Home /></PublicLayout>} />
@@ -175,53 +175,60 @@
 // }
 
 // export default App;
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { Toaster } from 'react-hot-toast';
-import { AuthProvider, useAuth } from './context/AuthContext';
-import { CartProvider } from './context/CartContext';
+import React from "react";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+} from "react-router-dom";
+import { Toaster } from "react-hot-toast";
+import { AuthProvider, useAuth } from "./context/AuthContext";
+import { CartProvider } from "./context/CartContext";
 
 // NEW
-import ScrollToTop from './components/ScrollToTop';
+import ScrollToTop from "./components/ScrollToTop";
 
 // Layout Components
-import Navbar from './components/Navbar';
-import Footer from './components/Footer';
-import AdminLayout from './components/AdminLayout';
+import Navbar from "./components/Navbar";
+import Footer from "./components/Footer";
+import AdminLayout from "./components/AdminLayout";
 
 // Public Pages
-import Home from './pages/Home';
-import Products from './pages/Products';
-import ProductDetail from './pages/ProductDetail';
-import Cart from './pages/Cart';
-import Login from './pages/Login';
-import Register from './pages/Register';
+import Home from "./pages/Home";
+import Products from "./pages/Products";
+import ProductDetail from "./pages/ProductDetail";
+import Cart from "./pages/Cart";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 
 // Protected Pages
-import Checkout from './pages/Checkout';
-import Orders from './pages/Orders';
-import Profile from './pages/Profile';
+import Checkout from "./pages/Checkout";
+import Orders from "./pages/Orders";
+import Profile from "./pages/Profile";
 
 // Import both order detail components
-import OrderDetail from './pages/OrderDetail';              // Customer version
-import AdminOrderDetail from './pages/admin/OrderDetail';   // Admin version
+import OrderDetail from "./pages/OrderDetail"; // Customer version
+import AdminOrderDetail from "./pages/admin/OrderDetail"; // Admin version
 
 // Admin Pages
-import AdminDashboard from './pages/admin/AdminDashboard';
-import AdminUsers from './pages/admin/AdminUsers';
-import AdminProducts from './pages/admin/AdminProducts';
-import ProductForm from './pages/admin/ProductForm';
-import AdminOrders from './pages/admin/AdminOrders';
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminUsers from "./pages/admin/AdminUsers";
+import AdminProducts from "./pages/admin/AdminProducts";
+import ProductForm from "./pages/admin/ProductForm";
+import AdminOrders from "./pages/admin/AdminOrders";
 
 // Additional
-import PrivacyPolicy from './pages/PrivacyPolicy';
-import ContactUs from './pages/ContactUs';
-import NotFound from './pages/NotFound';
-import FAQ from './pages/Faq';
-import DeliveryInfo from './pages/DeliveryInfo';
-import TermsOfService from './pages/TermsofService';
-import About from './pages/About';
-import ScrollProgress from './components/ScrollProgress';
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import ContactUs from "./pages/ContactUs";
+import NotFound from "./pages/NotFound";
+import FAQ from "./pages/Faq";
+import DeliveryInfo from "./pages/DeliveryInfo";
+import TermsOfService from "./pages/TermsofService";
+import About from "./pages/About";
+import ScrollProgress from "./components/ScrollProgress";
 
 // Protected Route
 const ProtectedRoute = ({ children, adminOnly = false }) => {
@@ -236,7 +243,7 @@ const ProtectedRoute = ({ children, adminOnly = false }) => {
 
   if (!user) return <Navigate to="/login" />;
 
-  if (adminOnly && user.role !== 'admin' && user.role !== 'subadmin')
+  if (adminOnly && user.role !== "admin" && user.role !== "subadmin")
     return <Navigate to="/" />;
 
   return children;
@@ -249,12 +256,10 @@ const PublicLayout = ({ children }) => (
     <div className="sticky top-0 z-50">
       <Navbar />
     </div>
-    
+
     {/* Main content with proper spacing */}
-    <main className="flex-grow">
-      {children}
-    </main>
-    
+    <main className="flex-grow">{children}</main>
+
     <Footer />
   </div>
 );
@@ -272,25 +277,25 @@ function App() {
             toastOptions={{
               duration: 3000,
               style: {
-                background: 'rgba(15, 23, 42, 0.85)', // slate-900 with transparency
-                color: 'white',
-                backdropFilter: 'blur(6px)',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                borderRadius: '10px',
-                padding: '10px 14px',
-                fontSize: '14px',
-                boxShadow: '0 8px 20px rgba(0,0,0,0.25)',
+                background: "rgba(15, 23, 42, 0.85)", // slate-900 with transparency
+                color: "white",
+                backdropFilter: "blur(6px)",
+                border: "1px solid rgba(255, 255, 255, 0.1)",
+                borderRadius: "10px",
+                padding: "10px 14px",
+                fontSize: "14px",
+                boxShadow: "0 8px 20px rgba(0,0,0,0.25)",
               },
               success: {
                 iconTheme: {
-                  primary: '#22c55e', // light green icon only (clean)
-                  secondary: 'white',
+                  primary: "#22c55e", // light green icon only (clean)
+                  secondary: "white",
                 },
               },
               error: {
                 iconTheme: {
-                  primary: '#ef4444',
-                  secondary: 'white',
+                  primary: "#ef4444",
+                  secondary: "white",
                 },
               },
             }}
@@ -298,25 +303,129 @@ function App() {
           <ScrollProgress />
           <Routes>
             {/* ========== Public Routes ========== */}
-            <Route path="/" element={<PublicLayout><Home /></PublicLayout>} />
-            <Route path="/products" element={<PublicLayout><Products /></PublicLayout>} />
-            <Route path="/products/:id" element={<PublicLayout><ProductDetail /></PublicLayout>} />
-            <Route path="/cart" element={<PublicLayout><Cart /></PublicLayout>} />
-            <Route path="/login" element={<PublicLayout><Login /></PublicLayout>} />
-            <Route path="/register" element={<PublicLayout><Register /></PublicLayout>} />
-            <Route path="/privacy" element={<PublicLayout><PrivacyPolicy /></PublicLayout>} />
-            <Route path="/contact" element={<PublicLayout><ContactUs /></PublicLayout>} />
-            <Route path="/faq" element={<PublicLayout><FAQ /></PublicLayout>} />
-            <Route path="/shipping" element={<PublicLayout><DeliveryInfo /></PublicLayout>} />
-            <Route path="/terms" element={<PublicLayout><TermsOfService /></PublicLayout>} />
-            <Route path="/about" element={<PublicLayout><About /></PublicLayout>} />
+            <Route
+              path="/"
+              element={
+                <PublicLayout>
+                  <Home />
+                </PublicLayout>
+              }
+            />
+            <Route
+              path="/products"
+              element={
+                <PublicLayout>
+                  <Products />
+                </PublicLayout>
+              }
+            />
+            <Route
+              path="/products/:id"
+              element={
+                <PublicLayout>
+                  <ProductDetail />
+                </PublicLayout>
+              }
+            />
+            <Route
+              path="/cart"
+              element={
+                <PublicLayout>
+                  <Cart />
+                </PublicLayout>
+              }
+            />
+            <Route
+              path="/login"
+              element={
+                <PublicLayout>
+                  <Login />
+                </PublicLayout>
+              }
+            />
+            <Route
+              path="/register"
+              element={
+                <PublicLayout>
+                  <Register />
+                </PublicLayout>
+              }
+            />
+            <Route
+              path="/forgot-password"
+              element={
+                <PublicLayout>
+                  <ForgotPassword />
+                </PublicLayout>
+              }
+            />
+
+            <Route
+              path="/reset-password"
+              element={
+                <PublicLayout>
+                  <ResetPassword />
+                </PublicLayout>
+              }
+            />
+
+            <Route
+              path="/privacy"
+              element={
+                <PublicLayout>
+                  <PrivacyPolicy />
+                </PublicLayout>
+              }
+            />
+            <Route
+              path="/contact"
+              element={
+                <PublicLayout>
+                  <ContactUs />
+                </PublicLayout>
+              }
+            />
+            <Route
+              path="/faq"
+              element={
+                <PublicLayout>
+                  <FAQ />
+                </PublicLayout>
+              }
+            />
+            <Route
+              path="/shipping"
+              element={
+                <PublicLayout>
+                  <DeliveryInfo />
+                </PublicLayout>
+              }
+            />
+            <Route
+              path="/terms"
+              element={
+                <PublicLayout>
+                  <TermsOfService />
+                </PublicLayout>
+              }
+            />
+            <Route
+              path="/about"
+              element={
+                <PublicLayout>
+                  <About />
+                </PublicLayout>
+              }
+            />
 
             {/* ========== Customer Protected Routes ========== */}
             <Route
               path="/checkout"
               element={
                 <ProtectedRoute>
-                  <PublicLayout><Checkout /></PublicLayout>
+                  <PublicLayout>
+                    <Checkout />
+                  </PublicLayout>
                 </ProtectedRoute>
               }
             />
@@ -324,7 +433,9 @@ function App() {
               path="/orders"
               element={
                 <ProtectedRoute>
-                  <PublicLayout><Orders /></PublicLayout>
+                  <PublicLayout>
+                    <Orders />
+                  </PublicLayout>
                 </ProtectedRoute>
               }
             />
@@ -334,7 +445,9 @@ function App() {
               path="/orders/:id"
               element={
                 <ProtectedRoute>
-                  <PublicLayout><OrderDetail /></PublicLayout>
+                  <PublicLayout>
+                    <OrderDetail />
+                  </PublicLayout>
                 </ProtectedRoute>
               }
             />
@@ -343,7 +456,9 @@ function App() {
               path="/profile"
               element={
                 <ProtectedRoute>
-                  <PublicLayout><Profile /></PublicLayout>
+                  <PublicLayout>
+                    <Profile />
+                  </PublicLayout>
                 </ProtectedRoute>
               }
             />
@@ -370,7 +485,14 @@ function App() {
             </Route>
 
             {/* 404 */}
-            <Route path="*" element={<PublicLayout><NotFound /></PublicLayout>} />
+            <Route
+              path="*"
+              element={
+                <PublicLayout>
+                  <NotFound />
+                </PublicLayout>
+              }
+            />
           </Routes>
         </CartProvider>
       </AuthProvider>

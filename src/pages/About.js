@@ -164,7 +164,7 @@ const About = () => {
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-500/20 border border-emerald-400/30 backdrop-blur-sm mb-8">
               <Sunrise size={16} className="text-emerald-400" />
               <span className="text-sm font-semibold uppercase tracking-wider text-emerald-200">
-                New Local Brand • Established 2025',
+                New Local Brand • Established 2025,
               </span>
             </div>
             
@@ -356,7 +356,7 @@ const About = () => {
               </span>
             </div>
             <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">
-              2025', First Year
+              2025, First Year
             </h2>
             <p className="text-lg text-slate-600 max-w-3xl mx-auto">
               Every step of our journey so far
