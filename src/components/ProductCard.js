@@ -523,14 +523,13 @@
 // export default ProductCard;
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ShoppingCart, Star, Heart, Zap, Shield, Truck } from 'lucide-react';
+import { ShoppingCart, Star, Heart, Eye, Plus, Minus } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import toast from 'react-hot-toast';
 
 const ProductCard = ({ product }) => {
   const { addToCart, cartItems } = useCart();
-  const [isWishlisted, setIsWishlisted] = useState(false);
-  const [imageLoaded, setImageLoaded] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
 
   // Variant logic
   const variants = product.variants || [];
@@ -566,178 +565,198 @@ const ProductCard = ({ product }) => {
 
   const handleAddToCart = (e) => {
     e.preventDefault();
-    if (isOutOfStock || isAtStockLimit) {
-      toast.error(isOutOfStock ? 'Out of stock' : 'Maximum quantity in cart');
-      return;
-    }
+    e.stopPropagation();
+    if (isOutOfStock || isAtStockLimit) return;
     addToCart(product, selectedVariant);
-    toast.success(`${product.name} added to cart`);
+    toast.success('Added to cart!', {
+      icon: '🛒',
+      style: {
+        borderRadius: '12px',
+        background: '#1e293b',
+        color: '#fff',
+      },
+    });
   };
 
   return (
-    <Link to={`/products/${product._id}`} className="group block h-full">
-      <div className="relative h-full flex flex-col bg-white border border-slate-200 rounded-xl overflow-hidden hover:border-slate-300 hover:shadow-xl transition-all duration-300">
+    <Link 
+      to={`/products/${product._id}`} 
+      className="group block h-full"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
+      <div className="relative h-full flex flex-col bg-white rounded-3xl border-2 border-transparent hover:border-amber-200 overflow-hidden transition-all duration-500 shadow-sm hover:shadow-2xl hover:shadow-amber-100/50">
         
-        {/* Image Container */}
-        <div className="relative bg-slate-50">
-          <div className="aspect-square p-4">
+        {/* Animated Border Gradient */}
+        <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-amber-400 via-orange-400 to-rose-400 opacity-0 group-hover:opacity-100 transition-opacity duration-500 -z-10 blur-sm" />
+        <div className="absolute inset-[2px] bg-white rounded-[22px] -z-10" />
+
+        {/* Image Section */}
+        <div className="relative overflow-hidden">
+          <div className="aspect-square bg-gradient-to-br from-amber-50 to-orange-50 p-6">
             {mainImage && (
-              <>
-                {/* Skeleton loader */}
-                {!imageLoaded && (
-                  <div className="absolute inset-4 bg-slate-100 animate-pulse rounded-lg" />
-                )}
-                <img
-                  src={mainImage}
-                  alt={product.name}
-                  onLoad={() => setImageLoaded(true)}
-                  className={`w-full h-full object-contain transition-all duration-500 group-hover:scale-105 ${
-                    imageLoaded ? 'opacity-100' : 'opacity-0'
-                  } ${isOutOfStock ? 'opacity-50' : ''}`}
-                />
-              </>
+              <img
+                src={mainImage}
+                alt={product.name}
+                className={`w-full h-full object-contain transition-all duration-700 ${
+                  isHovered ? 'scale-110 rotate-2' : 'scale-100 rotate-0'
+                } ${isOutOfStock ? 'grayscale opacity-50' : ''}`}
+              />
             )}
           </div>
 
-          {/* Badges Container */}
-          <div className="absolute top-3 left-3 flex flex-col gap-1.5">
+          {/* Badges */}
+          <div className="absolute top-4 left-4 flex flex-col gap-2">
             {hasDiscount && (
-              <span className="inline-flex items-center px-2.5 py-1 bg-red-600 text-white text-[11px] font-bold rounded">
+              <div className="px-3 py-1.5 bg-gradient-to-r from-rose-500 to-pink-500 text-white text-xs font-bold rounded-full shadow-lg">
                 {discountPercent}% OFF
-              </span>
+              </div>
             )}
             {product.isBestSeller && (
-              <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-100 text-amber-800 text-[11px] font-bold rounded">
-                <Zap className="w-3 h-3" />
-                Bestseller
-              </span>
+              <div className="px-3 py-1.5 bg-gradient-to-r from-amber-400 to-orange-400 text-white text-xs font-bold rounded-full shadow-lg flex items-center gap-1">
+                ⭐ Best Seller
+              </div>
             )}
-            {product.isOrganic && (
-              <span className="inline-flex items-center px-2.5 py-1 bg-green-100 text-green-800 text-[11px] font-bold rounded">
-                🌿 Organic
-              </span>
+            {variantLabel && (
+              <div className="px-3 py-1.5 bg-white text-slate-700 text-xs font-bold rounded-full shadow-lg border">
+                {variantLabel}
+              </div>
             )}
           </div>
 
-          {/* Wishlist Button */}
-          <button
-            onClick={(e) => {
-              e.preventDefault();
-              setIsWishlisted(!isWishlisted);
-              toast.success(isWishlisted ? 'Removed from wishlist' : 'Added to wishlist');
-            }}
-            className="absolute top-3 right-3 w-9 h-9 rounded-full bg-white shadow-md flex items-center justify-center hover:bg-slate-50 transition-colors"
-          >
-            <Heart className={`w-4 h-4 ${isWishlisted ? 'text-red-500 fill-current' : 'text-slate-400'}`} />
-          </button>
+          {/* Side Actions */}
+          <div className={`absolute top-4 right-4 flex flex-col gap-2 transition-all duration-300 ${
+            isHovered ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-4'
+          }`}>
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                toast.success('Added to wishlist');
+              }}
+              className="w-10 h-10 bg-white rounded-full shadow-lg flex items-center justify-center hover:bg-rose-50 hover:text-rose-500 transition-colors"
+            >
+              <Heart className="w-5 h-5" />
+            </button>
+            <button
+              onClick={(e) => e.preventDefault()}
+              className="w-10 h-10 bg-white rounded-full shadow-lg flex items-center justify-center hover:bg-blue-50 hover:text-blue-500 transition-colors"
+            >
+              <Eye className="w-5 h-5" />
+            </button>
+          </div>
 
-          {/* Variant Badge */}
-          {variantLabel && (
-            <div className="absolute bottom-3 left-3">
-              <span className="px-2.5 py-1 bg-slate-900 text-white text-[11px] font-semibold rounded">
-                {variantLabel}
-              </span>
+          {/* Stock Warning */}
+          {isLowStock && !isOutOfStock && (
+            <div className="absolute bottom-4 left-4 right-4">
+              <div className="px-4 py-2 bg-orange-500 text-white text-xs font-bold rounded-full text-center animate-pulse">
+                🔥 Only {stock} left - Order soon!
+              </div>
+            </div>
+          )}
+
+          {/* Out of Stock Overlay */}
+          {isOutOfStock && (
+            <div className="absolute inset-0 bg-white/80 backdrop-blur-sm flex items-center justify-center">
+              <div className="px-6 py-3 bg-slate-900 text-white font-bold rounded-full">
+                Sold Out
+              </div>
             </div>
           )}
         </div>
 
         {/* Content */}
-        <div className="flex-1 flex flex-col p-4">
-          {/* Brand/Category */}
-          <div className="flex items-center gap-2 mb-1.5">
-            <span className="text-xs font-medium text-slate-400 uppercase tracking-wide">
-              {product.brand || product.category}
-            </span>
-          </div>
+        <div className="flex-1 flex flex-col p-5">
+          {/* Category */}
+          <span className="text-xs font-semibold text-amber-600 uppercase tracking-wider mb-2">
+            {product.category}
+          </span>
 
-          {/* Product Name */}
-          <h3 className="text-sm font-medium text-slate-800 line-clamp-2 mb-2 group-hover:text-blue-600 transition-colors">
+          {/* Name */}
+          <h3 className="font-bold text-slate-800 text-lg mb-2 line-clamp-2 group-hover:text-slate-900 transition-colors">
             {product.name}
           </h3>
 
           {/* Rating */}
-          <div className="flex items-center gap-2 mb-3">
+          <div className="flex items-center gap-2 mb-4">
             {hasRatings ? (
               <>
-                <div className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-600 text-white text-xs font-bold rounded">
-                  {product.ratings.average.toFixed(1)}
-                  <Star className="w-3 h-3 fill-current" />
+                <div className="flex items-center gap-1 px-2 py-1 bg-amber-50 rounded-lg">
+                  <Star className="w-4 h-4 text-amber-500 fill-current" />
+                  <span className="text-sm font-bold text-amber-700">
+                    {product.ratings.average.toFixed(1)}
+                  </span>
                 </div>
                 <span className="text-xs text-slate-400">
-                  ({product.ratings.count.toLocaleString()})
+                  {product.ratings.count} reviews
                 </span>
               </>
             ) : (
-              <span className="text-xs text-slate-400">No ratings</span>
+              <span className="text-xs text-slate-400 italic">New product</span>
             )}
           </div>
 
-          {/* Price */}
-          <div className="mb-3">
-            <div className="flex items-baseline gap-2">
-              <span className="text-xl font-bold text-slate-900">
-                ₹{displayPrice?.toLocaleString()}
-              </span>
-              {hasDiscount && (
-                <>
+          {/* Spacer */}
+          <div className="flex-1" />
+
+          {/* Price & Cart */}
+          <div className="flex items-end justify-between gap-4">
+            <div>
+              <div className="flex items-baseline gap-2">
+                <span className="text-2xl font-extrabold text-slate-900">
+                  ₹{displayPrice?.toLocaleString()}
+                </span>
+                {hasDiscount && (
                   <span className="text-sm text-slate-400 line-through">
                     ₹{basePrice?.toLocaleString()}
                   </span>
-                  <span className="text-xs font-semibold text-green-600">
-                    Save ₹{(basePrice - displayPrice)?.toLocaleString()}
-                  </span>
-                </>
+                )}
+              </div>
+              {hasDiscount && (
+                <span className="text-xs text-emerald-600 font-semibold">
+                  Save ₹{(basePrice - displayPrice)?.toLocaleString()}
+                </span>
               )}
             </div>
-          </div>
 
-          {/* Stock Status */}
-          <div className="mb-4">
-            {isOutOfStock ? (
-              <span className="text-xs font-medium text-red-600">Out of stock</span>
-            ) : isLowStock ? (
-              <span className="text-xs font-medium text-orange-600">
-                Hurry, only {stock} left!
-              </span>
+            {/* Add to Cart */}
+            {currentQtyInCart > 0 ? (
+              <div className="flex items-center gap-1 bg-slate-100 rounded-full p-1">
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    // Remove from cart logic
+                  }}
+                  className="w-8 h-8 rounded-full bg-white shadow-sm flex items-center justify-center hover:bg-slate-50"
+                >
+                  <Minus className="w-4 h-4" />
+                </button>
+                <span className="w-8 text-center font-bold text-sm">{currentQtyInCart}</span>
+                <button
+                  onClick={handleAddToCart}
+                  disabled={isAtStockLimit}
+                  className={`w-8 h-8 rounded-full flex items-center justify-center shadow-sm ${
+                    isAtStockLimit 
+                      ? 'bg-slate-200 text-slate-400 cursor-not-allowed' 
+                      : 'bg-amber-500 text-white hover:bg-amber-600'
+                  }`}
+                >
+                  <Plus className="w-4 h-4" />
+                </button>
+              </div>
             ) : (
-              <span className="text-xs font-medium text-green-600">In stock</span>
+              <button
+                onClick={handleAddToCart}
+                disabled={isOutOfStock}
+                className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg transition-all duration-300 ${
+                  isOutOfStock
+                    ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                    : 'bg-gradient-to-br from-amber-500 to-orange-500 text-white hover:shadow-xl hover:scale-110'
+                }`}
+              >
+                <ShoppingCart className="w-5 h-5" />
+              </button>
             )}
           </div>
-
-          {/* Quick Features */}
-          <div className="flex flex-wrap gap-3 mb-4 text-[10px] text-slate-500">
-            <span className="inline-flex items-center gap-1">
-              <Truck className="w-3 h-3" />
-              Free Delivery
-            </span>
-            <span className="inline-flex items-center gap-1">
-              <Shield className="w-3 h-3" />
-              Quality Assured
-            </span>
-          </div>
-
-          {/* Add to Cart Button */}
-          <button
-            onClick={handleAddToCart}
-            disabled={isOutOfStock || isAtStockLimit}
-            className={`mt-auto w-full py-2.5 rounded-lg font-semibold text-sm transition-all flex items-center justify-center gap-2 ${
-              isOutOfStock || isAtStockLimit
-                ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
-                : currentQtyInCart > 0
-                ? 'bg-amber-50 text-amber-700 border-2 border-amber-200 hover:bg-amber-100'
-                : 'bg-amber-400 text-slate-900 hover:bg-amber-500 shadow-sm hover:shadow-md'
-            }`}
-          >
-            <ShoppingCart className="w-4 h-4" />
-            {isOutOfStock 
-              ? 'Out of Stock' 
-              : isAtStockLimit 
-              ? 'Max in Cart' 
-              : currentQtyInCart > 0 
-              ? `In Cart (${currentQtyInCart})`
-              : 'Add to Cart'
-            }
-          </button>
         </div>
       </div>
     </Link>
