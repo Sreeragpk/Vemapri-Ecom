@@ -421,11 +421,18 @@ const Register = () => {
     setLoading(true);
 
     try {
+      // await api.post('/auth/verify-otp', {
+      //   identifier: formData.email,
+      //   otp: otpData.emailOtp,
+      //   type: 'email',
+      // });
       await api.post('/auth/verify-otp', {
-        identifier: formData.email,
-        otp: otpData.emailOtp,
-        type: 'email',
-      });
+  identifier: formData.email,
+  otp: otpData.emailOtp,
+  type: 'email',
+  purpose: 'email-verification',
+});
+
 
       toast.success('Verification successful! Please login.');
       navigate('/login');
@@ -439,7 +446,12 @@ const Register = () => {
   const handleResendOtp = async (type) => {
     try {
       const identifier = type === 'email' ? formData.email : formData.mobile;
-      await api.post('/auth/resend-otp', { identifier, type });
+      await api.post('/auth/resend-otp', {
+  identifier,
+  type,
+  purpose: 'email-verification',
+});
+
       toast.success(`OTP sent to your ${type}`);
     } catch (error) {
       toast.error('Failed to resend OTP');
