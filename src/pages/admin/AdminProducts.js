@@ -993,15 +993,16 @@ const AdminProducts = () => {
   // Debounced search
   const [searchInput, setSearchInput] = useState('');
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (searchInput !== filters.search) {
-        handleFilterChange('search', searchInput);
-      }
-    }, 400);
+useEffect(() => {
+  const timer = setTimeout(() => {
+    if (searchInput !== filters.search) {
+      handleFilterChange('search', searchInput);
+    }
+  }, 400);
 
-    return () => clearTimeout(timer);
-  }, [searchInput]);
+  return () => clearTimeout(timer);
+}, [searchInput, filters.search]);
+
 
   useEffect(() => {
     fetchProducts();
