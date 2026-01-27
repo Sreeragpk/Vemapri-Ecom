@@ -2792,14 +2792,7 @@ const ProductForm = () => {
                   className="flex-1 px-4 py-3 rounded-xl border-2 border-gray-200 text-sm"
                   placeholder="Value (e.g., 25g per 100g)"
                 />
-                <button
-                  type="button"
-                  onClick={addSpecification}
-                  className="px-6 py-3 bg-gradient-to-r from-cyan-600 to-blue-600 text-white rounded-xl flex items-center gap-2 font-semibold shadow-lg hover:shadow-xl transition-shadow"
-                >
-                  <Plus size={20} />
-                  <span className="hidden sm:inline">Add</span>
-                </button>
+              
               </div>
 
               {formData.specifications.length > 0 ? (

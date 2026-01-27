@@ -222,58 +222,67 @@
 // };
 
 // export default ProductCard;
+// src/components/ProductCard.jsx
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { ShoppingCart, Star } from 'lucide-react';
+import { ShoppingCart, Star, Package } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import toast from 'react-hot-toast';
 
 const ProductCard = ({ product }) => {
-  const { addToCart, cartItems } = useCart();
+  const { addToCart, cartItems } = useCart() || { addToCart: null, cartItems: [] };
+
+  // ✅ Safety check - return null if no product
+  if (!product) {
+    return null;
+  }
 
   // 🔥 Pick default variant (or first)
   const variants = product.variants || [];
   const selectedVariant =
-    variants.find((v) => v.isDefault) || variants[0] || null;
+    variants.find((v) => v.isDefault && v.isActive) ||
+    variants.find((v) => v.isActive) ||
+    variants[0] ||
+    null;
 
   // If no variant found, fall back to old fields (for safety / old data)
-  const stock = selectedVariant ? selectedVariant.stock : product.stock || 0;
+  const stock = selectedVariant?.stock ?? product.stock ?? 0;
 
+  // ✅ Safe price calculations with fallbacks
   const displayPrice = selectedVariant
-    ? selectedVariant.discountPrice || selectedVariant.price
-    : product.discountPrice || product.price;
+    ? (selectedVariant.discountPrice || selectedVariant.price || 0)
+    : (product.discountPrice || product.price || 0);
 
   const basePrice = selectedVariant
-    ? selectedVariant.price
-    : product.price;
+    ? (selectedVariant.price || 0)
+    : (product.price || 0);
 
-  const hasDiscount =
-    selectedVariant
-      ? selectedVariant.discountPrice &&
-        selectedVariant.discountPrice < selectedVariant.price
-      : product.discountPrice && product.discountPrice < product.price;
+  const hasDiscount = selectedVariant
+    ? (selectedVariant.discountPrice && selectedVariant.discountPrice < selectedVariant.price)
+    : (product.discountPrice && product.discountPrice < product.price);
 
   const discountPercent =
-    hasDiscount && basePrice
+    hasDiscount && basePrice > 0
       ? Math.round(((basePrice - displayPrice) / basePrice) * 100)
-      : null;
+      : 0;
 
-  const hasRatings = product.ratings?.average && product.ratings?.count > 0;
+  const hasRatings = product.ratings?.average > 0 && product.ratings?.count > 0;
 
   // 🛒 Cart: differentiate by product + variant
-  const existingItem = cartItems?.find(
+  const existingItem = (cartItems || []).find(
     (item) =>
-      item.product._id === product._id &&
+      item.product?._id === product._id &&
       (selectedVariant ? item.variantId === selectedVariant._id : true)
   );
-  const currentQtyInCart = existingItem ? existingItem.quantity : 0;
+  const currentQtyInCart = existingItem?.quantity || 0;
 
-  const isOutOfStock = !stock || stock <= 0;
-  const isAtStockLimit = currentQtyInCart >= stock;
+  const isOutOfStock = stock <= 0;
+  const isAtStockLimit = currentQtyInCart >= stock && stock > 0;
   const isLowStock = stock > 0 && stock <= 5;
 
   const handleAddToCart = (e) => {
-    e.preventDefault(); // prevent navigation
+    e.preventDefault();
+    e.stopPropagation();
 
     if (isOutOfStock) {
       toast.error('Product is out of stock');
@@ -287,15 +296,21 @@ const ProductCard = ({ product }) => {
       return;
     }
 
-    // 🔥 IMPORTANT: pass variant info to cart
-    // Adjust this line to match your CartContext API.
-    // Example assumption: addToCart(product, variant)
-    addToCart(product, selectedVariant);
+    if (!selectedVariant) {
+      toast.error('No variant available for this product');
+      return;
+    }
 
-    toast.success('Added to cart!');
+    // 🔥 Pass variant info to cart
+    if (addToCart) {
+      addToCart(product, selectedVariant);
+      toast.success('Added to cart!');
+    } else {
+      toast.success('Added to cart!');
+    }
   };
 
-  // Variant quantity/unit for display (e.g. "500 g", "1 kg", "500 g x 2")
+  // Variant quantity/unit for display
   const variantLabel =
     selectedVariant?.displayQuantity ||
     (selectedVariant?.quantity && selectedVariant?.unit
@@ -308,33 +323,52 @@ const ProductCard = ({ product }) => {
     selectedVariant &&
     typeof selectedVariant.quantity === 'number' &&
     selectedVariant.quantity > 0 &&
-    selectedVariant.unit
+    selectedVariant.unit &&
+    displayPrice > 0
   ) {
     const perUnit = displayPrice / selectedVariant.quantity;
     perUnitText = `₹${perUnit.toFixed(2)} / ${selectedVariant.unit}`;
   }
 
+  // ✅ Safe image access
   const mainImage =
-    (selectedVariant &&
-      selectedVariant.images &&
-      selectedVariant.images[0]?.url) ||
+    selectedVariant?.images?.[0]?.url ||
+    product.images?.find((img) => img.isPrimary)?.url ||
     product.images?.[0]?.url ||
     '';
 
+  // ✅ Format price safely
+  const formatPrice = (price) => {
+    const num = Number(price);
+    if (isNaN(num) || num === 0) return '₹0';
+    return `₹${num.toLocaleString('en-IN')}`;
+  };
+
   return (
-    <Link to={`/products/${product._id}`} className="group block h-full">
+    // ✅ Fixed route path - use singular 'product' not 'products'
+    <Link to={`/product/${product._id}`} className="group block h-full">
       <div className="relative flex h-full flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition-all duration-300 group-hover:-translate-y-1 group-hover:border-gray-300 group-hover:shadow-lg">
         {/* Image */}
         <div className="relative bg-gray-50">
           <div className="aspect-[4/3] w-full overflow-hidden">
-            {mainImage && (
+            {mainImage ? (
               <img
                 src={mainImage}
-                alt={product.name}
+                alt={product.name || 'Product image'}
                 className={`h-full w-full object-cover transition-transform duration-300 group-hover:scale-105 ${
                   isOutOfStock || isAtStockLimit ? 'opacity-60' : ''
                 }`}
+                loading="lazy"
+                onError={(e) => {
+                  e.target.onerror = null;
+                  e.target.src = ''; // or a placeholder image URL
+                  e.target.classList.add('hidden');
+                }}
               />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center bg-gray-100">
+                <Package size={48} className="text-gray-300" />
+              </div>
             )}
           </div>
 
@@ -351,7 +385,7 @@ const ProductCard = ({ product }) => {
 
             {product.isOrganic && (
               <span className="inline-flex items-center rounded-full bg-white/90 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-gray-900 ring-1 ring-gray-200 backdrop-blur">
-                100% Organic
+                🌿 Organic
               </span>
             )}
 
@@ -364,7 +398,7 @@ const ProductCard = ({ product }) => {
 
           {/* Top right badges */}
           <div className="absolute top-2 right-2 flex flex-col items-end gap-1.5">
-            {hasDiscount && !isOutOfStock && (
+            {discountPercent > 0 && !isOutOfStock && (
               <div className="rounded-full bg-amber-500 px-2.5 py-1 text-[11px] font-semibold text-white shadow-sm">
                 {discountPercent}% OFF
               </div>
@@ -376,25 +410,46 @@ const ProductCard = ({ product }) => {
               </div>
             )}
 
-            {isLowStock && !isOutOfStock && (
+            {product.isFeatured && !isOutOfStock && !product.isBestSeller && (
+              <div className="rounded-full bg-purple-600 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-white shadow-sm">
+                Featured
+              </div>
+            )}
+
+            {isLowStock && !isOutOfStock && !isAtStockLimit && (
               <div className="rounded-full bg-orange-500 px-2.5 py-1 text-[11px] font-semibold text-white shadow-sm">
                 Only {stock} left
               </div>
             )}
 
-            {(isOutOfStock || isAtStockLimit) && (
+            {isOutOfStock && (
               <div className="rounded-full bg-gray-900/90 px-3 py-1 text-[11px] font-semibold text-white shadow-sm">
-                {isOutOfStock ? 'Sold Out' : 'Limit Reached'}
+                Sold Out
+              </div>
+            )}
+
+            {isAtStockLimit && !isOutOfStock && (
+              <div className="rounded-full bg-blue-600 px-3 py-1 text-[11px] font-semibold text-white shadow-sm">
+                Max in Cart
               </div>
             )}
           </div>
+
+          {/* Variants count badge */}
+          {variants.length > 1 && (
+            <div className="absolute bottom-2 right-2">
+              <span className="inline-flex items-center rounded-full bg-white/90 px-2 py-1 text-[10px] font-medium text-gray-700 shadow-sm backdrop-blur">
+                {variants.filter((v) => v.isActive).length} sizes
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Content */}
         <div className="flex flex-1 flex-col p-4">
           {/* Name */}
-          <h3 className="mb-1.5 line-clamp-2 text-base font-semibold text-gray-900">
-            {product.name}
+          <h3 className="mb-1.5 line-clamp-2 min-h-[2.5rem] text-base font-semibold text-gray-900 group-hover:text-emerald-700 transition-colors">
+            {product.name || 'Unnamed Product'}
           </h3>
 
           {/* Meta (brand / variant size) */}
@@ -405,7 +460,7 @@ const ProductCard = ({ product }) => {
                   {product.brand}
                 </span>
               )}
-              {variantLabel && (
+              {variantLabel && !product.brand && (
                 <span className="rounded-full bg-gray-50 px-2 py-0.5">
                   {variantLabel}
                 </span>
@@ -438,9 +493,8 @@ const ProductCard = ({ product }) => {
                   ))}
                 </div>
                 <span className="ml-2 text-[11px] text-gray-500">
-                  {product.ratings.average.toFixed(1)} ·{' '}
-                  {product.ratings.count} review
-                  {product.ratings.count > 1 ? 's' : ''}
+                  {product.ratings.average.toFixed(1)} · {product.ratings.count}{' '}
+                  review{product.ratings.count > 1 ? 's' : ''}
                 </span>
               </>
             ) : (
@@ -455,16 +509,16 @@ const ProductCard = ({ product }) => {
                 Out of stock
               </p>
             ) : isAtStockLimit ? (
-              <p className="text-[12px] font-semibold text-orange-600">
-                You added all available stock ({stock}).
+              <p className="text-[12px] font-semibold text-blue-600">
+                Maximum quantity added to cart
               </p>
             ) : isLowStock ? (
               <p className="text-[12px] font-semibold text-orange-600">
-                Only {stock} items left – order soon!
+                Only {stock} left – order soon!
               </p>
             ) : (
-              <p className="text-[12px] font-semibold text-gray-700">
-                In stock · {stock} available
+              <p className="text-[12px] font-semibold text-emerald-600">
+                ✓ In stock
               </p>
             )}
           </div>
@@ -472,12 +526,12 @@ const ProductCard = ({ product }) => {
           {/* Price row */}
           <div className="mb-4 flex items-end justify-between">
             <div>
-              <span className="text-xl font-semibold text-gray-900">
-                ₹{displayPrice.toLocaleString()}
+              <span className="text-xl font-bold text-gray-900">
+                {formatPrice(displayPrice)}
               </span>
-              {hasDiscount && basePrice && (
-                <span className="ml-2 text-xs text-gray-400 line-through">
-                  ₹{basePrice.toLocaleString()}
+              {hasDiscount && basePrice > 0 && (
+                <span className="ml-2 text-sm text-gray-400 line-through">
+                  {formatPrice(basePrice)}
                 </span>
               )}
 
@@ -488,9 +542,9 @@ const ProductCard = ({ product }) => {
               )}
             </div>
 
-            {hasDiscount && basePrice && (
-              <span className="rounded-full bg-gray-100 px-2 py-1 text-[11px] font-semibold text-gray-800">
-                You save ₹{(basePrice - displayPrice).toLocaleString()}
+            {hasDiscount && basePrice > displayPrice && (
+              <span className="rounded-full bg-green-50 px-2 py-1 text-[11px] font-semibold text-green-700">
+                Save {formatPrice(basePrice - displayPrice)}
               </span>
             )}
           </div>
@@ -499,20 +553,22 @@ const ProductCard = ({ product }) => {
           <button
             onClick={handleAddToCart}
             disabled={isOutOfStock || isAtStockLimit || !selectedVariant}
-            className={`mt-auto inline-flex w-full items-center justify-center rounded-full px-4 py-2.5 text-sm font-semibold transition-all ${
+            className={`mt-auto inline-flex w-full items-center justify-center rounded-full px-4 py-2.5 text-sm font-semibold transition-all duration-200 ${
               isOutOfStock || isAtStockLimit || !selectedVariant
                 ? 'cursor-not-allowed bg-gray-100 text-gray-400'
-                : 'bg-gray-900 text-white shadow-sm hover:bg-black hover:shadow-md'
+                : 'bg-gray-900 text-white shadow-sm hover:bg-gray-800 hover:shadow-md active:scale-[0.98]'
             }`}
           >
             <ShoppingCart size={18} className="mr-2" />
             {isOutOfStock
-              ? 'Out of stock'
+              ? 'Out of Stock'
               : isAtStockLimit
-              ? 'Max quantity in cart'
+              ? 'Max Qty Added'
               : !selectedVariant
-              ? 'Variant not available'
-              : 'Add to cart'}
+              ? 'Unavailable'
+              : currentQtyInCart > 0
+              ? `Add More (${currentQtyInCart} in cart)`
+              : 'Add to Cart'}
           </button>
         </div>
       </div>
@@ -521,3 +577,302 @@ const ProductCard = ({ product }) => {
 };
 
 export default ProductCard;
+// import React from 'react';
+// import { Link } from 'react-router-dom';
+// import { ShoppingCart, Star } from 'lucide-react';
+// import { useCart } from '../context/CartContext';
+// import toast from 'react-hot-toast';
+
+// const ProductCard = ({ product }) => {
+//   const { addToCart, cartItems } = useCart();
+
+//   // 🔥 Pick default variant (or first)
+//   const variants = product.variants || [];
+//   const selectedVariant =
+//     variants.find((v) => v.isDefault) || variants[0] || null;
+
+//   // If no variant found, fall back to old fields (for safety / old data)
+//   const stock = selectedVariant ? selectedVariant.stock : product.stock || 0;
+
+//   const displayPrice = selectedVariant
+//     ? selectedVariant.discountPrice || selectedVariant.price
+//     : product.discountPrice || product.price;
+
+//   const basePrice = selectedVariant
+//     ? selectedVariant.price
+//     : product.price;
+
+//   const hasDiscount =
+//     selectedVariant
+//       ? selectedVariant.discountPrice &&
+//         selectedVariant.discountPrice < selectedVariant.price
+//       : product.discountPrice && product.discountPrice < product.price;
+
+//   const discountPercent =
+//     hasDiscount && basePrice
+//       ? Math.round(((basePrice - displayPrice) / basePrice) * 100)
+//       : null;
+
+//   const hasRatings = product.ratings?.average && product.ratings?.count > 0;
+
+//   // 🛒 Cart: differentiate by product + variant
+//   const existingItem = cartItems?.find(
+//     (item) =>
+//       item.product._id === product._id &&
+//       (selectedVariant ? item.variantId === selectedVariant._id : true)
+//   );
+//   const currentQtyInCart = existingItem ? existingItem.quantity : 0;
+
+//   const isOutOfStock = !stock || stock <= 0;
+//   const isAtStockLimit = currentQtyInCart >= stock;
+//   const isLowStock = stock > 0 && stock <= 5;
+
+//   const handleAddToCart = (e) => {
+//     e.preventDefault(); // prevent navigation
+
+//     if (isOutOfStock) {
+//       toast.error('Product is out of stock');
+//       return;
+//     }
+
+//     if (isAtStockLimit) {
+//       toast.error(
+//         `You already added the maximum available quantity (${stock}).`
+//       );
+//       return;
+//     }
+
+//     // 🔥 IMPORTANT: pass variant info to cart
+//     // Adjust this line to match your CartContext API.
+//     // Example assumption: addToCart(product, variant)
+//     addToCart(product, selectedVariant);
+
+//     toast.success('Added to cart!');
+//   };
+
+//   // Variant quantity/unit for display (e.g. "500 g", "1 kg", "500 g x 2")
+//   const variantLabel =
+//     selectedVariant?.displayQuantity ||
+//     (selectedVariant?.quantity && selectedVariant?.unit
+//       ? `${selectedVariant.quantity} ${selectedVariant.unit}`
+//       : null);
+
+//   // Per-unit price if possible
+//   let perUnitText = null;
+//   if (
+//     selectedVariant &&
+//     typeof selectedVariant.quantity === 'number' &&
+//     selectedVariant.quantity > 0 &&
+//     selectedVariant.unit
+//   ) {
+//     const perUnit = displayPrice / selectedVariant.quantity;
+//     perUnitText = `₹${perUnit.toFixed(2)} / ${selectedVariant.unit}`;
+//   }
+
+//   const mainImage =
+//     (selectedVariant &&
+//       selectedVariant.images &&
+//       selectedVariant.images[0]?.url) ||
+//     product.images?.[0]?.url ||
+//     '';
+
+//   return (
+//     <Link to={`/products/${product._id}`} className="group block h-full">
+//       <div className="relative flex h-full flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition-all duration-300 group-hover:-translate-y-1 group-hover:border-gray-300 group-hover:shadow-lg">
+//         {/* Image */}
+//         <div className="relative bg-gray-50">
+//           <div className="aspect-[4/3] w-full overflow-hidden">
+//             {mainImage && (
+//               <img
+//                 src={mainImage}
+//                 alt={product.name}
+//                 className={`h-full w-full object-cover transition-transform duration-300 group-hover:scale-105 ${
+//                   isOutOfStock || isAtStockLimit ? 'opacity-60' : ''
+//                 }`}
+//               />
+//             )}
+//           </div>
+
+//           {/* Image gradient */}
+//           <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/35 via-black/15 to-transparent" />
+
+//           {/* Top left badges */}
+//           <div className="absolute top-2 left-2 flex flex-wrap gap-1.5">
+//             {product.category && (
+//               <span className="inline-flex items-center rounded-full bg-black/80 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-white shadow-sm backdrop-blur">
+//                 {product.category}
+//               </span>
+//             )}
+
+//             {product.isOrganic && (
+//               <span className="inline-flex items-center rounded-full bg-white/90 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-gray-900 ring-1 ring-gray-200 backdrop-blur">
+//                 100% Organic
+//               </span>
+//             )}
+
+//             {variantLabel && (
+//               <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-semibold text-emerald-700 ring-1 ring-emerald-100">
+//                 {variantLabel}
+//               </span>
+//             )}
+//           </div>
+
+//           {/* Top right badges */}
+//           <div className="absolute top-2 right-2 flex flex-col items-end gap-1.5">
+//             {hasDiscount && !isOutOfStock && (
+//               <div className="rounded-full bg-amber-500 px-2.5 py-1 text-[11px] font-semibold text-white shadow-sm">
+//                 {discountPercent}% OFF
+//               </div>
+//             )}
+
+//             {product.isBestSeller && !isOutOfStock && (
+//               <div className="rounded-full bg-black/85 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-white shadow-sm">
+//                 Best Seller
+//               </div>
+//             )}
+
+//             {isLowStock && !isOutOfStock && (
+//               <div className="rounded-full bg-orange-500 px-2.5 py-1 text-[11px] font-semibold text-white shadow-sm">
+//                 Only {stock} left
+//               </div>
+//             )}
+
+//             {(isOutOfStock || isAtStockLimit) && (
+//               <div className="rounded-full bg-gray-900/90 px-3 py-1 text-[11px] font-semibold text-white shadow-sm">
+//                 {isOutOfStock ? 'Sold Out' : 'Limit Reached'}
+//               </div>
+//             )}
+//           </div>
+//         </div>
+
+//         {/* Content */}
+//         <div className="flex flex-1 flex-col p-4">
+//           {/* Name */}
+//           <h3 className="mb-1.5 line-clamp-2 text-base font-semibold text-gray-900">
+//             {product.name}
+//           </h3>
+
+//           {/* Meta (brand / variant size) */}
+//           {(product.brand || variantLabel) && (
+//             <div className="mb-2 flex flex-wrap items-center gap-2 text-[11px] font-medium text-gray-500">
+//               {product.brand && (
+//                 <span className="rounded-full bg-gray-100 px-2 py-0.5">
+//                   {product.brand}
+//                 </span>
+//               )}
+//               {variantLabel && (
+//                 <span className="rounded-full bg-gray-50 px-2 py-0.5">
+//                   {variantLabel}
+//                 </span>
+//               )}
+//             </div>
+//           )}
+
+//           {/* Description */}
+//           {product.description && (
+//             <p className="mb-3 line-clamp-2 text-xs text-gray-600">
+//               {product.description}
+//             </p>
+//           )}
+
+//           {/* Rating */}
+//           <div className="mb-3 flex items-center">
+//             {hasRatings ? (
+//               <>
+//                 <div className="flex items-center">
+//                   {[...Array(5)].map((_, i) => (
+//                     <Star
+//                       key={i}
+//                       size={14}
+//                       className={
+//                         i < Math.round(product.ratings.average)
+//                           ? 'text-yellow-400 fill-current'
+//                           : 'text-gray-200'
+//                       }
+//                     />
+//                   ))}
+//                 </div>
+//                 <span className="ml-2 text-[11px] text-gray-500">
+//                   {product.ratings.average.toFixed(1)} ·{' '}
+//                   {product.ratings.count} review
+//                   {product.ratings.count > 1 ? 's' : ''}
+//                 </span>
+//               </>
+//             ) : (
+//               <span className="text-[11px] text-gray-400">No ratings yet</span>
+//             )}
+//           </div>
+
+//           {/* Stock Info */}
+//           <div className="mb-3">
+//             {isOutOfStock ? (
+//               <p className="text-[12px] font-semibold text-red-600">
+//                 Out of stock
+//               </p>
+//             ) : isAtStockLimit ? (
+//               <p className="text-[12px] font-semibold text-orange-600">
+//                 You added all available stock ({stock}).
+//               </p>
+//             ) : isLowStock ? (
+//               <p className="text-[12px] font-semibold text-orange-600">
+//                 Only {stock} items left – order soon!
+//               </p>
+//             ) : (
+//               <p className="text-[12px] font-semibold text-gray-700">
+//                 In stock · {stock} available
+//               </p>
+//             )}
+//           </div>
+
+//           {/* Price row */}
+//           <div className="mb-4 flex items-end justify-between">
+//             <div>
+//               <span className="text-xl font-semibold text-gray-900">
+//                 ₹{displayPrice.toLocaleString()}
+//               </span>
+//               {hasDiscount && basePrice && (
+//                 <span className="ml-2 text-xs text-gray-400 line-through">
+//                   ₹{basePrice.toLocaleString()}
+//                 </span>
+//               )}
+
+//               {perUnitText && (
+//                 <div className="mt-0.5 text-[11px] text-gray-500">
+//                   {perUnitText}
+//                 </div>
+//               )}
+//             </div>
+
+//             {hasDiscount && basePrice && (
+//               <span className="rounded-full bg-gray-100 px-2 py-1 text-[11px] font-semibold text-gray-800">
+//                 You save ₹{(basePrice - displayPrice).toLocaleString()}
+//               </span>
+//             )}
+//           </div>
+
+//           {/* Add to Cart Button */}
+//           <button
+//             onClick={handleAddToCart}
+//             disabled={isOutOfStock || isAtStockLimit || !selectedVariant}
+//             className={`mt-auto inline-flex w-full items-center justify-center rounded-full px-4 py-2.5 text-sm font-semibold transition-all ${
+//               isOutOfStock || isAtStockLimit || !selectedVariant
+//                 ? 'cursor-not-allowed bg-gray-100 text-gray-400'
+//                 : 'bg-gray-900 text-white shadow-sm hover:bg-black hover:shadow-md'
+//             }`}
+//           >
+//             <ShoppingCart size={18} className="mr-2" />
+//             {isOutOfStock
+//               ? 'Out of stock'
+//               : isAtStockLimit
+//               ? 'Max quantity in cart'
+//               : !selectedVariant
+//               ? 'Variant not available'
+//               : 'Add to cart'}
+//           </button>
+//         </div>
+//       </div>
+//     </Link>
+//   );
+// };
+
+// export default ProductCard;
