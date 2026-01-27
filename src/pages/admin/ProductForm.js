@@ -1490,22 +1490,19 @@ const ProductForm = () => {
   useEffect(() => {
     if (isEdit) fetchProduct();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+  }, [id, isEdit]);
 
   // -------------------------
   // API Handlers
   // -------------------------
-  const fetchProduct = async () => {
+  const fetchProduct = useCallback(async () => {
     setFetchingProduct(true);
     try {
       const res = await api.get(`/products/${id}`);
-      // Handle both old and new API response formats
       const p = res.data.data || res.data;
 
-      // Ensure variants array has at least one item
       let variants = p.variants || [];
       if (variants.length === 0) {
-        // Migration: Create variant from old base fields
         variants = [
           {
             ...EMPTY_VARIANT,
@@ -1523,7 +1520,6 @@ const ProductForm = () => {
         ];
       }
 
-      // Ensure at least one variant is default
       const hasDefault = variants.some((v) => v.isDefault);
       if (!hasDefault && variants.length > 0) {
         variants[0].isDefault = true;
@@ -1557,7 +1553,6 @@ const ProductForm = () => {
         variants,
       });
 
-      // Expand first variant by default
       setExpandedVariants([0]);
     } catch (error) {
       console.error('Failed to fetch product', error);
@@ -1566,7 +1561,7 @@ const ProductForm = () => {
     } finally {
       setFetchingProduct(false);
     }
-  };
+  }, [id, navigate]);
 
   // -------------------------
   // Form Handlers
@@ -1608,7 +1603,7 @@ const ProductForm = () => {
     });
   }, []);
 
-  const addVariant = () => {
+  const addVariant = useCallback(() => {
     const newVariant = {
       ...EMPTY_VARIANT,
       isDefault: formData.variants.length === 0,
@@ -1619,12 +1614,11 @@ const ProductForm = () => {
       variants: [...prev.variants, newVariant],
     }));
 
-    // Expand the new variant
     setExpandedVariants((prev) => [...prev, formData.variants.length]);
     toast.success('Variant added');
-  };
+  }, [formData.variants.length]);
 
-  const removeVariant = (index) => {
+  const removeVariant = useCallback((index) => {
     if (formData.variants.length <= 1) {
       toast.error('Product must have at least one variant');
       return;
@@ -1635,7 +1629,6 @@ const ProductForm = () => {
     setFormData((prev) => {
       const newVariants = prev.variants.filter((_, i) => i !== index);
 
-      // If removing default, set first active as default
       if (removingDefault && newVariants.length > 0) {
         const activeIndex = newVariants.findIndex((v) => v.isActive);
         if (activeIndex >= 0) {
@@ -1653,9 +1646,9 @@ const ProductForm = () => {
     );
 
     toast.success('Variant removed');
-  };
+  }, [formData.variants]);
 
-  const setDefaultVariant = (index) => {
+  const setDefaultVariant = useCallback((index) => {
     setFormData((prev) => ({
       ...prev,
       variants: prev.variants.map((v, i) => ({
@@ -1664,9 +1657,9 @@ const ProductForm = () => {
       })),
     }));
     toast.success('Default variant updated');
-  };
+  }, []);
 
-  const duplicateVariant = (index) => {
+  const duplicateVariant = useCallback((index) => {
     const source = formData.variants[index];
     const duplicate = {
       ...source,
@@ -1681,13 +1674,13 @@ const ProductForm = () => {
 
     setExpandedVariants((prev) => [...prev, formData.variants.length]);
     toast.success('Variant duplicated');
-  };
+  }, [formData.variants]);
 
-  const toggleVariantExpand = (index) => {
+  const toggleVariantExpand = useCallback((index) => {
     setExpandedVariants((prev) =>
       prev.includes(index) ? prev.filter((i) => i !== index) : [...prev, index]
     );
-  };
+  }, []);
 
   // -------------------------
   // Image Handlers
@@ -1717,7 +1710,6 @@ const ProductForm = () => {
       const valid = results.filter(Boolean);
       if (valid.length === 0) return;
 
-      // Set first image as primary if no images exist
       if (formData.images.length === 0 && valid.length > 0) {
         valid[0].isPrimary = true;
       }
@@ -1734,7 +1726,6 @@ const ProductForm = () => {
     setFormData((prev) => {
       const newImages = prev.images.filter((_, i) => i !== index);
 
-      // If removed image was primary, set first as primary
       if (prev.images[index]?.isPrimary && newImages.length > 0) {
         newImages[0].isPrimary = true;
       }
@@ -1756,9 +1747,9 @@ const ProductForm = () => {
   };
 
   // -------------------------
-  // Specification Handlers
+  // Specification Handlers (FIXED)
   // -------------------------
-  const addSpecification = () => {
+  const addSpecification = useCallback(() => {
     if (newSpec.key && newSpec.value) {
       setFormData((prev) => ({
         ...prev,
@@ -1769,20 +1760,20 @@ const ProductForm = () => {
     } else {
       toast.error('Please fill both key and value');
     }
-  };
+  }, [newSpec]);
 
-  const removeSpecification = (index) => {
+  const removeSpecification = useCallback((index) => {
     setFormData((prev) => ({
       ...prev,
       specifications: prev.specifications.filter((_, i) => i !== index),
     }));
     toast.success('Specification removed');
-  };
+  }, []);
 
   // -------------------------
-  // Feature Handlers
+  // Feature Handlers (FIXED)
   // -------------------------
-  const addFeature = () => {
+  const addFeature = useCallback(() => {
     if (newFeature.trim()) {
       setFormData((prev) => ({
         ...prev,
@@ -1793,15 +1784,15 @@ const ProductForm = () => {
     } else {
       toast.error('Please enter a feature');
     }
-  };
+  }, [newFeature]);
 
-  const removeFeature = (index) => {
+  const removeFeature = useCallback((index) => {
     setFormData((prev) => ({
       ...prev,
       features: prev.features.filter((_, i) => i !== index),
     }));
     toast.success('Feature removed');
-  };
+  }, []);
 
   // -------------------------
   // Validation
@@ -1809,17 +1800,14 @@ const ProductForm = () => {
   const validateForm = () => {
     const errors = [];
 
-    // Basic validations
     if (!formData.name?.trim()) errors.push('Product name is required');
     if (!formData.description?.trim()) errors.push('Description is required');
     if (!formData.brand?.trim()) errors.push('Brand is required');
 
-    // Images validation
     if (!formData.images || formData.images.length === 0) {
       errors.push('At least one product image is required');
     }
 
-    // Variants validation
     if (!formData.variants || formData.variants.length === 0) {
       errors.push('At least one variant is required');
     } else {
@@ -1847,7 +1835,6 @@ const ProductForm = () => {
         }
       });
 
-      // Check for duplicate SKUs
       const skus = formData.variants.map((v) => v.sku?.toUpperCase()).filter(Boolean);
       const duplicateSkus = skus.filter((sku, i) => skus.indexOf(sku) !== i);
       if (duplicateSkus.length > 0) {
@@ -1866,7 +1853,6 @@ const ProductForm = () => {
     setLoading(true);
 
     try {
-      // Validate
       const errors = validateForm();
       if (errors.length > 0) {
         errors.forEach((err) => toast.error(err));
@@ -1874,7 +1860,6 @@ const ProductForm = () => {
         return;
       }
 
-      // Build payload
       const payload = {
         name: formData.name.trim(),
         description: formData.description.trim(),
@@ -1899,7 +1884,6 @@ const ProductForm = () => {
         isBestSeller: formData.isBestSeller,
       };
 
-      // Add dimensions if any value exists
       if (
         formData.dimensions.length ||
         formData.dimensions.width ||
@@ -1918,7 +1902,6 @@ const ProductForm = () => {
         };
       }
 
-      // Process variants
       payload.variants = formData.variants.map((v) => {
         const variant = {
           name: v.name?.trim() || undefined,
@@ -1949,13 +1932,11 @@ const ProductForm = () => {
         return variant;
       });
 
-      // Ensure exactly one default variant
       const hasDefault = payload.variants.some((v) => v.isDefault);
       if (!hasDefault) {
         payload.variants[0].isDefault = true;
       }
 
-      // API call
       if (isEdit) {
         await api.put(`/products/${id}`, payload);
         toast.success('Product updated successfully');
@@ -2792,7 +2773,14 @@ const ProductForm = () => {
                   className="flex-1 px-4 py-3 rounded-xl border-2 border-gray-200 text-sm"
                   placeholder="Value (e.g., 25g per 100g)"
                 />
-              
+                <button
+                  type="button"
+                  onClick={addSpecification}
+                  className="px-6 py-3 bg-gradient-to-r from-cyan-600 to-blue-600 text-white rounded-xl flex items-center gap-2 font-semibold shadow-lg hover:shadow-xl transition-shadow"
+                >
+                  <Plus size={20} />
+                  <span className="hidden sm:inline">Add</span>
+                </button>
               </div>
 
               {formData.specifications.length > 0 ? (
