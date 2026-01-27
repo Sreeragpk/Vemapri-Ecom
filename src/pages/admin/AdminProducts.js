@@ -157,7 +157,8 @@ const AdminProducts = () => {
               <span className="inline-flex items-center gap-1 rounded-full bg-slate-900/60 border border-emerald-400/30 px-3 py-1">
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
                 <span className="font-semibold">
-                  {pagination.totalProducts.toLocaleString()}
+                 {(pagination.totalProducts ?? 0).toLocaleString()}
+
                 </span>
                 <span className="text-emerald-50/80">total products</span>
               </span>
@@ -309,7 +310,13 @@ const AdminProducts = () => {
           </div>
         ) : (
           products.map((product) => {
-            const effectivePrice = product.discountPrice || product.price;
+           const effectivePrice =
+  typeof product.discountPrice === 'number'
+    ? product.discountPrice
+    : typeof product.price === 'number'
+    ? product.price
+    : 0;
+
             const hasDiscount =
               product.discountPrice && product.discountPrice < product.price;
             const discountPercent =
@@ -412,11 +419,13 @@ const AdminProducts = () => {
                 {/* Price */}
                 <div className="flex items-baseline mb-2">
                   <span className="text-lg font-bold text-emerald-600">
-                    ₹{effectivePrice.toLocaleString()}
+                   ₹{(Number(effectivePrice) || 0).toLocaleString()}
+
                   </span>
                   {hasDiscount && (
                     <span className="ml-2 text-xs text-slate-400 line-through">
-                      ₹{product.price.toLocaleString()}
+                    ₹{(Number(product.price) || 0).toLocaleString()}
+
                     </span>
                   )}
                 </div>
