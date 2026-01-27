@@ -748,6 +748,7 @@
 // };
 
 // export default Products;
+// src/pages/Products.js
 import React, { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import api from '../utils/api';
@@ -761,7 +762,11 @@ import {
   LayoutGrid,
   SlidersHorizontal,
   TrendingUp,
-  Sparkles
+  Sparkles,
+  Package,
+  RefreshCw,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import productsBanner from '../assets/products.webp';
 
@@ -769,6 +774,7 @@ const Products = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [showFilters, setShowFilters] = useState(false);
   const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'compact'
 
@@ -780,6 +786,8 @@ const Products = () => {
     maxPrice: searchParams.get('maxPrice') || '',
     minRating: searchParams.get('minRating') || '',
     isOrganic: searchParams.get('isOrganic') || '',
+    isFeatured: searchParams.get('isFeatured') || '',
+    inStock: searchParams.get('inStock') || '',
     sort: searchParams.get('sort') || 'newest',
   });
 
@@ -787,6 +795,8 @@ const Products = () => {
     currentPage: Number(searchParams.get('page')) || 1,
     totalPages: 1,
     totalProducts: 0,
+    hasNextPage: false,
+    hasPrevPage: false,
   });
 
   const categories = [
@@ -809,13 +819,17 @@ const Products = () => {
     { value: 'priceAsc', label: 'Price: Low to High' },
     { value: 'priceDesc', label: 'Price: High to Low' },
     { value: 'rating', label: 'Top Rated', icon: TrendingUp },
+    { value: 'popularity', label: 'Most Popular' },
+    { value: 'name', label: 'Name (A-Z)' },
   ];
 
+  // Fetch products
   useEffect(() => {
     fetchProducts();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters, pagination.currentPage]);
 
+  // Update URL params
   useEffect(() => {
     const params = new URLSearchParams();
 
@@ -829,12 +843,14 @@ const Products = () => {
       params.set('page', String(pagination.currentPage));
     }
 
-    setSearchParams(params);
+    setSearchParams(params, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters, pagination.currentPage]);
 
   const fetchProducts = async () => {
     setLoading(true);
+    setError(null);
+    
     try {
       const params = {
         page: pagination.currentPage,
@@ -845,15 +861,31 @@ const Products = () => {
       };
 
       const res = await api.get('/products', { params });
-      setProducts(res.data.products);
-      setPagination((prev) => ({
-        ...prev,
-        currentPage: Number(res.data.currentPage),
-        totalPages: res.data.totalPages,
-        totalProducts: res.data.totalProducts,
-      }));
-    } catch (error) {
-      console.error('Error fetching products:', error);
+      
+      // ✅ Handle both old and new API response formats
+      const responseData = res.data?.data || res.data;
+      const productsData = responseData?.products || [];
+      const paginationData = responseData?.pagination || {};
+      
+      setProducts(productsData);
+      setPagination({
+        currentPage: paginationData.currentPage || Number(responseData.currentPage) || 1,
+        totalPages: paginationData.totalPages || responseData.totalPages || 1,
+        totalProducts: paginationData.totalProducts || responseData.totalProducts || 0,
+        hasNextPage: paginationData.hasNextPage || false,
+        hasPrevPage: paginationData.hasPrevPage || false,
+      });
+    } catch (err) {
+      console.error('Error fetching products:', err);
+      setError('Failed to load products. Please try again.');
+      setProducts([]);
+      setPagination({
+        currentPage: 1,
+        totalPages: 1,
+        totalProducts: 0,
+        hasNextPage: false,
+        hasPrevPage: false,
+      });
     } finally {
       setLoading(false);
     }
@@ -872,6 +904,7 @@ const Products = () => {
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
+    setPagination((prev) => ({ ...prev, currentPage: 1 }));
     fetchProducts();
   };
 
@@ -884,6 +917,8 @@ const Products = () => {
       maxPrice: '',
       minRating: '',
       isOrganic: '',
+      isFeatured: '',
+      inStock: '',
       sort: 'newest',
     });
     setPagination((prev) => ({
@@ -892,9 +927,23 @@ const Products = () => {
     }));
   };
 
+  const handlePageChange = (newPage) => {
+    if (newPage >= 1 && newPage <= pagination.totalPages) {
+      setPagination((prev) => ({
+        ...prev,
+        currentPage: newPage,
+      }));
+      // Scroll to top
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
   const activeFilterChips = useMemo(() => {
     const chips = [];
 
+    if (filters.search) {
+      chips.push({ label: `"${filters.search}"`, key: 'search' });
+    }
     if (filters.category) {
       chips.push({ label: filters.category, key: 'category' });
     }
@@ -919,17 +968,62 @@ const Products = () => {
         key: 'isOrganic',
       });
     }
+    if (filters.isFeatured === 'true') {
+      chips.push({
+        label: 'Featured',
+        key: 'isFeatured',
+      });
+    }
+    if (filters.inStock === 'true') {
+      chips.push({
+        label: 'In Stock',
+        key: 'inStock',
+      });
+    }
 
     return chips;
   }, [filters]);
 
   const removeChip = (key) => {
     if (key === 'price') {
-      handleFilterChange('minPrice', '');
-      handleFilterChange('maxPrice', '');
+      setFilters((prev) => ({ ...prev, minPrice: '', maxPrice: '' }));
     } else {
       handleFilterChange(key, '');
     }
+  };
+
+  // Generate pagination numbers
+  const getPaginationNumbers = () => {
+    const pages = [];
+    const { currentPage, totalPages } = pagination;
+    
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      pages.push(1);
+      
+      if (currentPage > 3) {
+        pages.push('...');
+      }
+      
+      for (let i = Math.max(2, currentPage - 1); i <= Math.min(totalPages - 1, currentPage + 1); i++) {
+        if (!pages.includes(i)) {
+          pages.push(i);
+        }
+      }
+      
+      if (currentPage < totalPages - 2) {
+        pages.push('...');
+      }
+      
+      if (!pages.includes(totalPages)) {
+        pages.push(totalPages);
+      }
+    }
+    
+    return pages;
   };
 
   return (
@@ -940,9 +1034,13 @@ const Products = () => {
           <img
             src={productsBanner}
             alt="Products"
-           className="w-full h-48 sm:h-56 md:h-64 lg:h-80 xl:h-96 object-cover"
+            className="w-full h-48 sm:h-56 md:h-64 lg:h-80 xl:h-96 object-cover"
+            onError={(e) => {
+              e.target.onerror = null;
+              e.target.style.display = 'none';
+            }}
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/80 to-transparent"></div>
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/80 to-transparent" />
         </div>
         
         <div className="relative max-w-[120rem] mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-16">
@@ -978,6 +1076,15 @@ const Products = () => {
                   placeholder="Search for products, brands, or categories..."
                   className="w-full pl-12 pr-4 py-3 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent transition-all"
                 />
+                {filters.search && (
+                  <button
+                    type="button"
+                    onClick={() => handleFilterChange('search', '')}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  >
+                    <X size={16} />
+                  </button>
+                )}
               </form>
             </div>
 
@@ -1032,6 +1139,16 @@ const Products = () => {
                 )}
               </button>
 
+              {/* Refresh Button */}
+              <button
+                onClick={fetchProducts}
+                disabled={loading}
+                className="p-3 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-colors disabled:opacity-50"
+                title="Refresh products"
+              >
+                <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
+              </button>
+
               {/* View Toggle */}
               <div className="hidden md:flex items-center gap-1 p-1 bg-slate-100 rounded-lg">
                 <button
@@ -1080,17 +1197,17 @@ const Products = () => {
                 </button>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
                 {/* Brand */}
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 mb-3">
                     Brand
                   </label>
-                  <div className="space-y-2">
+                  <div className="space-y-2 max-h-48 overflow-y-auto">
                     {['', ...brands].map((brand) => (
                       <label
                         key={brand || 'all'}
-                        className="flex items-center gap-3 p-3 rounded-lg hover:bg-slate-50 cursor-pointer transition-colors group"
+                        className="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-50 cursor-pointer transition-colors group"
                       >
                         <input
                           type="radio"
@@ -1121,7 +1238,7 @@ const Products = () => {
                     ].map((option) => (
                       <label
                         key={option.value || 'all-type'}
-                        className="flex items-center gap-3 p-3 rounded-lg hover:bg-slate-50 cursor-pointer transition-colors group"
+                        className="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-50 cursor-pointer transition-colors group"
                       >
                         <input
                           type="radio"
@@ -1153,7 +1270,7 @@ const Products = () => {
                     ].map((option) => (
                       <label
                         key={option.value || 'any-rating'}
-                        className="flex items-center gap-3 p-3 rounded-lg hover:bg-slate-50 cursor-pointer transition-colors group"
+                        className="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-50 cursor-pointer transition-colors group"
                       >
                         <input
                           type="radio"
@@ -1171,6 +1288,33 @@ const Products = () => {
                   </div>
                 </div>
 
+                {/* Stock & Featured */}
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-3">
+                    Availability
+                  </label>
+                  <div className="space-y-2">
+                    <label className="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-50 cursor-pointer transition-colors">
+                      <input
+                        type="checkbox"
+                        checked={filters.inStock === 'true'}
+                        onChange={(e) => handleFilterChange('inStock', e.target.checked ? 'true' : '')}
+                        className="w-4 h-4 text-emerald-600 rounded focus:ring-2 focus:ring-emerald-500"
+                      />
+                      <span className="text-sm text-slate-700">In Stock Only</span>
+                    </label>
+                    <label className="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-50 cursor-pointer transition-colors">
+                      <input
+                        type="checkbox"
+                        checked={filters.isFeatured === 'true'}
+                        onChange={(e) => handleFilterChange('isFeatured', e.target.checked ? 'true' : '')}
+                        className="w-4 h-4 text-amber-600 rounded focus:ring-2 focus:ring-amber-500"
+                      />
+                      <span className="text-sm text-slate-700">Featured Products</span>
+                    </label>
+                  </div>
+                </div>
+
                 {/* Price Range */}
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 mb-3">
@@ -1182,14 +1326,16 @@ const Products = () => {
                       placeholder="Min Price"
                       value={filters.minPrice}
                       onChange={(e) => handleFilterChange('minPrice', e.target.value)}
-                      className="w-full px-4 py-3 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900"
+                      className="w-full px-4 py-2.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900"
+                      min="0"
                     />
                     <input
                       type="number"
                       placeholder="Max Price"
                       value={filters.maxPrice}
                       onChange={(e) => handleFilterChange('maxPrice', e.target.value)}
-                      className="w-full px-4 py-3 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900"
+                      className="w-full px-4 py-2.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900"
+                      min="0"
                     />
                     <button
                       onClick={clearFilters}
@@ -1233,14 +1379,14 @@ const Products = () => {
               </>
             ) : (
               <p className="text-sm text-slate-500">
-                No active filters
+                Showing all products
               </p>
             )}
           </div>
           
           <div className="text-sm">
             <span className="font-semibold text-slate-900">
-              {pagination.totalProducts}
+              {pagination.totalProducts || 0}
             </span>
             <span className="text-slate-500"> products found</span>
           </div>
@@ -1249,27 +1395,55 @@ const Products = () => {
 
       {/* Products Grid */}
       <div className="max-w-[120rem] mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {loading ? (
+        {/* Error State */}
+        {error && (
+          <div className="max-w-md mx-auto text-center py-16">
+            <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <X size={32} className="text-red-500" />
+            </div>
+            <h3 className="text-xl font-semibold text-slate-900 mb-3">
+              Something went wrong
+            </h3>
+            <p className="text-slate-600 mb-6">
+              {error}
+            </p>
+            <button
+              onClick={fetchProducts}
+              className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-slate-900 text-white font-medium rounded-xl hover:bg-black transition-colors"
+            >
+              <RefreshCw size={18} />
+              Try Again
+            </button>
+          </div>
+        )}
+
+        {/* Loading State */}
+        {loading && !error && (
           <div className={`grid gap-6 ${
             viewMode === 'grid'
               ? 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5'
               : 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6'
           }`}>
-            {[...Array(10)].map((_, i) => (
+            {[...Array(12)].map((_, i) => (
               <div
                 key={i}
                 className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm animate-pulse"
               >
                 <div className="aspect-square bg-slate-200 rounded-xl mb-4" />
                 <div className="h-4 bg-slate-200 rounded w-3/4 mb-2" />
-                <div className="h-4 bg-slate-100 rounded w-1/2" />
+                <div className="h-4 bg-slate-100 rounded w-1/2 mb-3" />
+                <div className="h-3 bg-slate-100 rounded w-2/3 mb-2" />
+                <div className="h-8 bg-slate-200 rounded-lg mt-4" />
               </div>
             ))}
           </div>
-        ) : products.length === 0 ? (
+        )}
+
+        {/* Empty State */}
+        {!loading && !error && (!products || products.length === 0) && (
           <div className="max-w-md mx-auto text-center py-16">
             <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-6">
-              <Search size={32} className="text-slate-400" />
+              <Package size={32} className="text-slate-400" />
             </div>
             <h3 className="text-xl font-semibold text-slate-900 mb-3">
               No products found
@@ -1284,7 +1458,10 @@ const Products = () => {
               Clear all filters
             </button>
           </div>
-        ) : (
+        )}
+
+        {/* Products Grid */}
+        {!loading && !error && products && products.length > 0 && (
           <>
             <div className={`grid gap-6 ${
               viewMode === 'grid'
@@ -1298,78 +1475,84 @@ const Products = () => {
 
             {/* Pagination */}
             {pagination.totalPages > 1 && (
-              <div className="flex justify-center items-center mt-12 gap-2">
-                <button
-                  onClick={() =>
-                    setPagination((prev) => ({
-                      ...prev,
-                      currentPage: prev.currentPage - 1,
-                    }))
-                  }
-                  disabled={pagination.currentPage === 1}
-                  className="px-5 py-2.5 text-sm font-medium rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
-                >
-                  Previous
-                </button>
+              <div className="flex flex-col sm:flex-row justify-center items-center mt-12 gap-4">
+                {/* Page Info (Mobile) */}
+                <div className="text-sm text-slate-500 sm:hidden">
+                  Page {pagination.currentPage} of {pagination.totalPages}
+                </div>
 
-                <div className="flex gap-2">
-                  {[...Array(pagination.totalPages)].map((_, i) => {
-                    const page = i + 1;
-                    const isActive = pagination.currentPage === page;
-                    
-                    if (
-                      page === 1 ||
-                      page === pagination.totalPages ||
-                      (page >= pagination.currentPage - 1 &&
-                        page <= pagination.currentPage + 1)
-                    ) {
-                      return (
+                <div className="flex items-center gap-2">
+                  {/* Previous Button */}
+                  <button
+                    onClick={() => handlePageChange(pagination.currentPage - 1)}
+                    disabled={pagination.currentPage === 1}
+                    className="inline-flex items-center gap-1 px-4 py-2.5 text-sm font-medium rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                  >
+                    <ChevronLeft size={16} />
+                    <span className="hidden sm:inline">Previous</span>
+                  </button>
+
+                  {/* Page Numbers */}
+                  <div className="hidden sm:flex gap-1">
+                    {getPaginationNumbers().map((page, index) => (
+                      page === '...' ? (
+                        <span
+                          key={`ellipsis-${index}`}
+                          className="min-w-[40px] h-10 flex items-center justify-center text-slate-400"
+                        >
+                          ...
+                        </span>
+                      ) : (
                         <button
                           key={page}
-                          onClick={() =>
-                            setPagination((prev) => ({
-                              ...prev,
-                              currentPage: page,
-                            }))
-                          }
+                          onClick={() => handlePageChange(page)}
                           className={`min-w-[40px] h-10 text-sm font-medium rounded-xl border transition-all ${
-                            isActive
+                            pagination.currentPage === page
                               ? 'bg-slate-900 text-white border-slate-900 shadow-lg shadow-slate-900/20'
                               : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
                           }`}
                         >
                           {page}
                         </button>
-                      );
-                    } else if (
-                      page === pagination.currentPage - 2 ||
-                      page === pagination.currentPage + 2
-                    ) {
-                      return (
-                        <span
-                          key={page}
-                          className="min-w-[40px] h-10 flex items-center justify-center text-slate-400"
-                        >
-                          ...
-                        </span>
-                      );
-                    }
-                    return null;
-                  })}
+                      )
+                    ))}
+                  </div>
+
+                  {/* Mobile Page Indicator */}
+                  <div className="sm:hidden flex items-center gap-2">
+                    <input
+                      type="number"
+                      min={1}
+                      max={pagination.totalPages}
+                      value={pagination.currentPage}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value, 10);
+                        if (val >= 1 && val <= pagination.totalPages) {
+                          handlePageChange(val);
+                        }
+                      }}
+                      className="w-16 h-10 text-center text-sm font-medium border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900"
+                    />
+                    <span className="text-sm text-slate-500">
+                      / {pagination.totalPages}
+                    </span>
+                  </div>
+
+                  {/* Next Button */}
+                  <button
+                    onClick={() => handlePageChange(pagination.currentPage + 1)}
+                    disabled={pagination.currentPage === pagination.totalPages}
+                    className="inline-flex items-center gap-1 px-4 py-2.5 text-sm font-medium rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                  >
+                    <span className="hidden sm:inline">Next</span>
+                    <ChevronRight size={16} />
+                  </button>
                 </div>
 
-                <button
-                  onClick={() =>
-                    setPagination((prev) => ({
-                      ...prev,
-                      currentPage: prev.currentPage + 1,
-                    }))
-                  }
-                  disabled={pagination.currentPage === pagination.totalPages}
-                  className="px-5 py-2.5 text-sm font-medium rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
-                >
-                  Next
-                </button>
+                {/* Page Info (Desktop) */}
+                <div className="hidden sm:block text-sm text-slate-500">
+                  Showing {((pagination.currentPage - 1) * 12) + 1} - {Math.min(pagination.currentPage * 12, pagination.totalProducts)} of {pagination.totalProducts}
+                </div>
               </div>
             )}
           </>
