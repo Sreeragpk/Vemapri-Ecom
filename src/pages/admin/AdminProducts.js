@@ -551,7 +551,7 @@ import {
   Filter,
   X,
   Layers,
-  TrendingUp,
+
   TrendingDown,
   Box,
 } from 'lucide-react';
