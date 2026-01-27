@@ -346,7 +346,7 @@ const ProductCard = ({ product }) => {
 
   return (
     // ✅ Fixed route path - use singular 'product' not 'products'
-    <Link to={`/product/${product._id}`} className="group block h-full">
+    <Link to={`/products/${product._id}`} className="group block h-full">
       <div className="relative flex h-full flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition-all duration-300 group-hover:-translate-y-1 group-hover:border-gray-300 group-hover:shadow-lg">
         {/* Image */}
         <div className="relative bg-gray-50">
