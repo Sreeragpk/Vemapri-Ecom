@@ -224,19 +224,19 @@
 // };
 
 // export default Cart;
-import React, { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { useCart } from '../context/CartContext';
+//src/pages/Cart.js
+// src/pages/Cart.js
+import React, { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { useCart } from "../context/CartContext";
 import {
   Trash2,
   Plus,
   Minus,
   ShoppingBag,
-  AlertCircle,
-  Truck,
-  Tag,
-} from 'lucide-react';
-import api from '../utils/api';
+
+} from "lucide-react";
+import api from "../utils/api";
 
 const Cart = () => {
   const navigate = useNavigate();
@@ -245,475 +245,218 @@ const Cart = () => {
     removeFromCart,
     updateQuantity,
     getCartTotal,
-    clearCart,
   } = useCart();
 
   const [stockErrors, setStockErrors] = useState({});
 
-  // helper key for product + variant
   const getItemKey = (item) =>
-    `${item.product._id}_${item.variantId || 'noVar'}`;
+    `${item.product._id}_${item.variantId || "noVar"}`;
 
-  // Check stock for items in cart (variant-aware)
+  // 🔐 AUTHORITATIVE STOCK CHECK (variant-only)
   useEffect(() => {
     const checkStock = async () => {
       const errors = {};
 
-      for (let item of cartItems) {
+      for (const item of cartItems) {
         try {
           const res = await api.get(`/products/${item.product._id}`);
           const product = res.data;
 
-          let available = 0;
+          const variant = product.variants?.find(
+            (v) => String(v._id) === String(item.variantId)
+          );
 
-          if (item.variantId && product.variants && product.variants.length) {
-            const v = product.variants.find(
-              (vv) =>
-                vv._id === item.variantId ||
-                vv._id?.toString() === item.variantId?.toString()
-            );
-            available = v?.stock ?? 0;
-          } else {
-            // fallback for old/non-variant products
-            available = product.stock ?? 0;
+          const available = Number(variant?.stock ?? 0);
+
+          if (available <= 0) {
+            removeFromCart(item.product._id, item.variantId);
+            continue;
           }
 
-          if (available < item.quantity) {
+          if (item.quantity > available) {
+            updateQuantity(item.product._id, available, item.variantId);
             errors[getItemKey(item)] = {
               available,
               requested: item.quantity,
             };
           }
-        } catch (error) {
-          console.error('Error checking stock:', error);
+        } catch (err) {
+          console.error("Stock check failed", err);
         }
       }
 
       setStockErrors(errors);
     };
 
-    if (cartItems.length > 0) {
-      checkStock();
-    } else {
-      setStockErrors({});
-    }
-  }, [cartItems]);
+    if (cartItems.length > 0) checkStock();
+    else setStockErrors({});
+  }, [cartItems, removeFromCart, updateQuantity]);
 
   const hasStockIssues = Object.keys(stockErrors).length > 0;
 
-  const handleCheckout = () => {
-    if (cartItems.length === 0 || hasStockIssues) return;
-    navigate('/checkout');
-  };
-
-  const calculateTax = () => getCartTotal() * 0.18; // 18% GST
+  const calculateTax = () => getCartTotal() * 0.18;
   const calculateShipping = () => (getCartTotal() > 500 ? 0 : 80);
   const calculateTotal = () =>
     getCartTotal() + calculateTax() + calculateShipping();
 
-  const freeShippingThreshold = 500;
-  const remainingForFreeShipping = Math.max(
-    0,
-    freeShippingThreshold - getCartTotal()
-  );
-
-  // Empty cart view
   if (cartItems.length === 0) {
     return (
-      <div className="min-h-[70vh] bg-gradient-to-br from-slate-50 via-slate-100 to-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 flex flex-col items-center text-center">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-slate-900/5 text-slate-900 mb-4 shadow-sm">
-            <ShoppingBag size={36} />
-          </div>
-          <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-2">
-            Your cart is empty
-          </h2>
-          <p className="text-slate-500 mb-6 max-w-md text-sm sm:text-base">
-            Looks like you haven&apos;t added anything yet. Explore our products
-            and start your order.
-          </p>
-          <Link
-            to="/products"
-            className="inline-flex items-center justify-center rounded-full bg-slate-900 px-6 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-black transition-colors"
-          >
-            Browse products
-          </Link>
-        </div>
+      <div className="min-h-[70vh] flex flex-col items-center justify-center text-center">
+        <ShoppingBag size={48} className="text-slate-400 mb-3" />
+        <h2 className="text-2xl font-bold">Your cart is empty</h2>
+        <p className="text-slate-500 mt-2">
+          Browse products and add items to your cart.
+        </p>
+        <Link
+          to="/products"
+          className="mt-4 rounded-full bg-slate-900 px-6 py-2 text-white"
+        >
+          Browse products
+        </Link>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100/60 to-white">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header + step indicator */}
-        <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">
-              Shopping cart
-            </h1>
-            <p className="mt-1 text-sm text-slate-500">
-              Review your items before proceeding to checkout.
-            </p>
-          </div>
+    <div className="min-h-screen bg-slate-50 py-8">
+      <div className="max-w-7xl mx-auto px-4 grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* ITEMS */}
+        <div className="lg:col-span-2 space-y-4">
+          {cartItems.map((item) => {
+            const variant = item.variant;
+            const price =
+              variant?.discountPrice ?? variant?.price ?? 0;
 
-          {/* Stepper */}
-          <div className="flex items-center gap-2 text-xs sm:text-sm font-medium text-slate-500">
-            <div className="flex items-center gap-1">
-              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-900 text-[10px] font-bold text-white">
-                1
-              </span>
-              <span>Cart</span>
-            </div>
-            <span className="h-px w-6 bg-slate-300" />
-            <div className="flex items-center gap-1 opacity-80">
-              <span className="flex h-6 w-6 items-center justify-center rounded-full border border-slate-400 text-[10px] font-bold text-slate-600">
-                2
-              </span>
-              <span>Address &amp; payment</span>
-            </div>
-            <span className="h-px w-6 bg-slate-300" />
-            <div className="flex items-center gap-1 opacity-60">
-              <span className="flex h-6 w-6 items-center justify-center rounded-full border border-slate-300 text-[10px] font-bold text-slate-400">
-                3
-              </span>
-              <span>Confirmation</span>
-            </div>
-          </div>
-        </div>
+            const localStock = Number.isFinite(variant?.stock)
+              ? variant.stock
+              : 0;
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Cart items */}
-          <div className="lg:col-span-2">
-            <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-              <div className="px-4 sm:px-6 py-3 border-b border-slate-100 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-900/5 text-slate-900">
-                    <ShoppingBag size={18} />
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold text-slate-900">
-                      Items in your cart
-                    </p>
-                    <p className="text-xs text-slate-500">
-                      {cartItems.length} item
-                      {cartItems.length > 1 ? 's' : ''}
-                    </p>
-                  </div>
-                </div>
-                <button
-                  onClick={clearCart}
-                  className="text-xs font-medium text-slate-400 hover:text-rose-500 transition-colors"
-                >
-                  Clear cart
-                </button>
-              </div>
+            const isOutOfStock = localStock <= 0;
+            const isMaxQty = item.quantity >= localStock;
 
-              <div className="divide-y divide-slate-100">
-                {cartItems.map((item) => {
-                  const key = getItemKey(item);
+            return (
+              <div
+                key={getItemKey(item)}
+                className="flex gap-4 bg-white p-4 rounded-xl shadow-sm"
+              >
+                <img
+                  src={
+                    variant?.images?.[0]?.url ||
+                    item.product.images?.[0]?.url ||
+                    "/placeholder.png"
+                  }
+                  alt={item.product.name}
+                  className="w-24 h-24 object-contain border rounded-lg"
+                />
 
-                  // price from variant if available
-                  const variantPrice =
-                    item.variant &&
-                    (item.variant.discountPrice != null
-                      ? item.variant.discountPrice
-                      : item.variant.price);
-
-                  const productPrice =
-                    item.product.discountPrice != null
-                      ? item.product.discountPrice
-                      : item.product.price;
-
-                  const price =
-                    variantPrice != null ? variantPrice : productPrice || 0;
-
-                  const subtotal = price * item.quantity;
-
-                  const hasError = stockErrors[key];
-
-                  // local stock hint for +/- buttons (fallback from cart data)
-                  const localStock =
-                    (item.variant && item.variant.stock) ||
-                    item.product.stock ||
-                    Infinity;
-
-                  const isMaxQty =
-                    Number.isFinite(localStock) &&
-                    item.quantity >= localStock;
-                  const isMinQty = item.quantity <= 1;
-
-                  const variantLabel =
-                    item.variant?.displayQuantity ||
-                    (item.variant?.quantity && item.variant?.unit
-                      ? `${item.variant.quantity} ${item.variant.unit}`
-                      : null);
-
-                  return (
-                    <div
-                      key={key}
-                      className="flex flex-col gap-4 px-4 py-4 sm:px-6 sm:py-5 md:flex-row md:items-center"
-                    >
-                      {/* Product Image */}
-                      <Link
-                        to={`/products/${item.product._id}`}
-                        className="flex-shrink-0"
-                      >
-                        <div className="h-24 w-24 rounded-xl border border-slate-200 bg-white flex items-center justify-center overflow-hidden">
-                          <img
-                            src={
-                              item.variant?.images?.[0]?.url ||
-                              item.product.images?.[0]?.url ||
-                              '/placeholder.png'
-                            }
-                            alt={item.product.name}
-                            className="h-full w-full object-contain"
-                          />
-                        </div>
-                      </Link>
-
-                      {/* Product Info */}
-                      <div className="flex-1 min-w-0">
-                        <Link
-                          to={`/products/${item.product._id}`}
-                          className="text-sm sm:text-base font-semibold text-slate-900 hover:text-slate-700 line-clamp-2 transition-colors"
-                        >
-                          {item.product.name}
-                          {variantLabel && (
-                            <span className="ml-1 text-xs text-slate-500">
-                              ({variantLabel})
-                            </span>
-                          )}
-                        </Link>
-                        <p className="mt-1 text-xs text-slate-500">
-                          {item.product.category}
-                        </p>
-
-                        <div className="mt-2 flex flex-wrap items-center gap-2">
-                          <span className="text-base font-bold text-slate-900">
-                            ₹{price.toLocaleString()}
-                          </span>
-
-                          {/* Show strike-through only if we know original price and discount applied */}
-                          {variantPrice != null &&
-                            item.variant &&
-                            item.variant.discountPrice != null && (
-                              <>
-                                <span className="text-xs text-slate-400 line-through">
-                                  ₹{item.variant.price.toLocaleString()}
-                                </span>
-                                <span className="inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700 border border-amber-100">
-                                  <Tag size={12} className="mr-1" />
-                                  Save ₹
-                                  {(
-                                    item.variant.price -
-                                    item.variant.discountPrice
-                                  ).toLocaleString()}
-                                </span>
-                              </>
-                            )}
-
-                          {variantPrice == null &&
-                            item.product.discountPrice != null && (
-                              <>
-                                <span className="text-xs text-slate-400 line-through">
-                                  ₹{item.product.price.toLocaleString()}
-                                </span>
-                                <span className="inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700 border border-amber-100">
-                                  <Tag size={12} className="mr-1" />
-                                  Save ₹
-                                  {(
-                                    item.product.price -
-                                    item.product.discountPrice
-                                  ).toLocaleString()}
-                                </span>
-                              </>
-                            )}
-                        </div>
-
-                        {/* Stock warning per item */}
-                        {hasError && (
-                          <div className="mt-2 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-2">
-                            <AlertCircle
-                              size={14}
-                              className="mt-0.5 text-amber-500"
-                            />
-                            <p className="text-[11px] text-amber-800 leading-snug">
-                              Only {hasError.available} unit
-                              {hasError.available === 1 ? '' : 's'} available.
-                              You&apos;ve requested {hasError.requested}. Please
-                              reduce the quantity to continue.
-                            </p>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Right section: qty + subtotal + remove */}
-                      <div className="flex flex-col items-end gap-3 min-w-[150px]">
-                        {/* Quantity Controls */}
-                        <div className="inline-flex items-center rounded-full bg-slate-50 border border-slate-200 px-1.5 py-1">
-                          <button
-                            onClick={() =>
-                              updateQuantity(
-                                item.product._id,
-                                item.quantity - 1,
-                                item.variantId
-                              )
-                            }
-                            disabled={isMinQty}
-                            className="flex h-7 w-7 items-center justify-center rounded-full text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                          >
-                            <Minus size={14} />
-                          </button>
-                          <span className="mx-2 min-w-[32px] text-center text-sm font-semibold text-slate-900">
-                            {item.quantity}
-                          </span>
-                          <button
-                            onClick={() =>
-                              updateQuantity(
-                                item.product._id,
-                                item.quantity + 1,
-                                item.variantId
-                              )
-                            }
-                            disabled={isMaxQty}
-                            className="flex h-7 w-7 items-center justify-center rounded-full text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                          >
-                            <Plus size={14} />
-                          </button>
-                        </div>
-
-                        {/* Subtotal */}
-                        <div className="text-right">
-                          <p className="text-xs text-slate-500">Item total</p>
-                          <p className="text-base font-bold text-slate-900">
-                            ₹{subtotal.toLocaleString()}
-                          </p>
-                        </div>
-
-                        {/* Remove Button */}
-                        <button
-                          onClick={() =>
-                            removeFromCart(item.product._id, item.variantId)
-                          }
-                          className="inline-flex items-center gap-1 text-xs font-medium text-slate-400 hover:text-rose-500 transition-colors"
-                        >
-                          <Trash2 size={14} />
-                          Remove
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-
-          {/* Order Summary */}
-          <div className="lg:col-span-1">
-            <div className="sticky top-20">
-              <div className="rounded-2xl border border-slate-200 bg-white shadow-md overflow-hidden">
-                <div className="bg-slate-900 px-4 py-3 text-white">
-                  <h2 className="text-lg font-semibold">Order summary</h2>
-                  <p className="text-[11px] text-slate-300">
-                    Taxes and shipping are calculated based on your cart value.
-                  </p>
-                </div>
-
-                <div className="p-4 sm:p-5">
-                  <div className="space-y-3 mb-4 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-slate-600">Subtotal</span>
-                      <span className="font-semibold text-slate-900">
-                        ₹{getCartTotal().toLocaleString()}
+                <div className="flex-1">
+                  <h3 className="font-semibold">
+                    {item.product.name}
+                    {variant?.displayQuantity && (
+                      <span className="text-sm text-slate-500">
+                        {" "}
+                        ({variant.displayQuantity})
                       </span>
-                    </div>
-
-                    <div className="flex justify-between">
-                      <span className="text-slate-600">Tax (18% GST)</span>
-                      <span className="font-semibold text-slate-900">
-                        ₹{calculateTax().toLocaleString()}
-                      </span>
-                    </div>
-
-                    <div className="flex justify-between">
-                      <span className="text-slate-600 flex items-center gap-1">
-                        Shipping
-                        <Truck size={14} className="text-slate-400" />
-                      </span>
-                      <span className="font-semibold">
-                        {calculateShipping() === 0 ? (
-                          <span className="text-amber-600">FREE</span>
-                        ) : (
-                          `₹${calculateShipping()}`
-                        )}
-                      </span>
-                    </div>
-
-                    {/* Free shipping hint */}
-                    {getCartTotal() > 0 && remainingForFreeShipping > 0 && (
-                      <div className="mt-1 flex items-start gap-2 rounded-lg bg-slate-900/5 px-2.5 py-2 text-[11px] text-slate-800 border border-slate-200">
-                        <Truck size={14} className="mt-0.5 text-slate-500" />
-                        <p>
-                          Add ₹
-                          {remainingForFreeShipping.toLocaleString()} more to
-                          unlock{' '}
-                          <span className="font-semibold">free shipping</span>.
-                        </p>
-                      </div>
                     )}
-                  </div>
+                  </h3>
 
-                  {/* Global stock issue warning */}
-                  {hasStockIssues && (
-                    <div className="mb-4 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-2 text-xs text-amber-800">
-                      <AlertCircle size={14} className="mt-0.5" />
-                      <p>
-                        Some items exceed available stock. Adjust the quantities
-                        in your cart before proceeding to checkout.
-                      </p>
-                    </div>
+                  <p className="text-sm text-slate-500">
+                    ₹{price.toLocaleString()}
+                  </p>
+
+                  {isOutOfStock && (
+                    <span className="inline-block mt-2 rounded-full bg-rose-100 px-2 py-0.5 text-xs text-rose-600">
+                      Out of stock
+                    </span>
                   )}
 
-                  <div className="border-t border-slate-200 pt-4 mb-4">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-semibold text-slate-900">
-                        Total payable
-                      </span>
-                      <span className="text-xl font-bold text-slate-900">
-                        ₹{calculateTotal().toLocaleString()}
-                      </span>
-                    </div>
-                    <p className="mt-1 text-[11px] text-slate-500">
-                      Price inclusive of GST. Final amount may adjust if cart
-                      changes.
-                    </p>
+                  <div className="mt-3 flex items-center gap-2">
+                    <button
+                      onClick={() =>
+                        updateQuantity(
+                          item.product._id,
+                          item.quantity - 1,
+                          item.variantId
+                        )
+                      }
+                      disabled={item.quantity <= 1}
+                      className="p-1 border rounded disabled:opacity-40"
+                    >
+                      <Minus size={14} />
+                    </button>
+
+                    <span className="w-8 text-center font-semibold">
+                      {item.quantity}
+                    </span>
+
+                    <button
+                      onClick={() =>
+                        updateQuantity(
+                          item.product._id,
+                          item.quantity + 1,
+                          item.variantId
+                        )
+                      }
+                      disabled={isMaxQty || isOutOfStock}
+                      className="p-1 border rounded disabled:opacity-40"
+                    >
+                      <Plus size={14} />
+                    </button>
                   </div>
-
-                  <button
-                    onClick={handleCheckout}
-                    disabled={hasStockIssues}
-                    className={`w-full rounded-full px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors ${
-                      hasStockIssues
-                        ? 'bg-slate-400 cursor-not-allowed'
-                        : 'bg-slate-900 hover:bg-black'
-                    }`}
-                  >
-                    {hasStockIssues
-                      ? 'Resolve stock issues to continue'
-                      : 'Proceed to checkout'}
-                  </button>
-
-                  <Link
-                    to="/products"
-                    className="mt-3 block w-full rounded-full border border-slate-200 bg-white px-4 py-2.5 text-center text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
-                  >
-                    Continue shopping
-                  </Link>
                 </div>
+
+                <button
+                  onClick={() =>
+                    removeFromCart(item.product._id, item.variantId)
+                  }
+                  className="text-rose-500 text-sm"
+                >
+                  <Trash2 size={16} />
+                </button>
               </div>
+            );
+          })}
+        </div>
+
+        {/* SUMMARY */}
+        <div className="bg-white rounded-xl shadow-md p-4 h-fit">
+          <h2 className="font-semibold text-lg mb-3">Order summary</h2>
+
+          <div className="space-y-2 text-sm">
+            <div className="flex justify-between">
+              <span>Subtotal</span>
+              <span>₹{getCartTotal().toLocaleString()}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Tax (18%)</span>
+              <span>₹{calculateTax().toLocaleString()}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Shipping</span>
+              <span>
+                {calculateShipping() === 0 ? "FREE" : "₹80"}
+              </span>
             </div>
           </div>
+
+          {hasStockIssues && (
+            <div className="mt-3 text-xs text-amber-700 bg-amber-50 p-2 rounded">
+              Some items were adjusted due to stock changes.
+            </div>
+          )}
+
+          <div className="mt-4 font-bold text-lg flex justify-between">
+            <span>Total</span>
+            <span>₹{calculateTotal().toLocaleString()}</span>
+          </div>
+
+          <button
+            onClick={() => navigate("/checkout")}
+            disabled={hasStockIssues}
+            className="mt-4 w-full rounded-full bg-slate-900 py-2 text-white disabled:opacity-50"
+          >
+            Proceed to checkout
+          </button>
         </div>
       </div>
     </div>
